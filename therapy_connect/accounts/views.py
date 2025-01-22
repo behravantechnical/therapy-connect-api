@@ -1,12 +1,20 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import JsonResponse
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from django.views import View
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import UserProfileSerializer, UserRegistrationSerializer
+from .permissions import IsOwnerOrSuperUser
+from .serializers import (
+    UserProfileSerializer,
+    UserProfileUpdateSerializer,
+    UserRegistrationSerializer,
+)
 from .utils import send_verification_email
 
 User = get_user_model()
@@ -34,7 +42,7 @@ class UserRegistrationView(generics.CreateAPIView):
         user = serializer.save()
 
         # Send verification email
-        send_verification_email(user)
+        send_verification_email(user, purpose="registration")
 
         return Response(
             {
@@ -57,10 +65,13 @@ class VerifyEmailView(APIView):
             )
 
         signer = TimestampSigner()
+
         try:
             user_id = signer.unsign(
                 token, max_age=86400
             )  # Token expires after 24 hours
+
+            # Activate the user
             user = User.objects.get(pk=user_id)
             user.is_active = True  # Activate the user
             user.save()
@@ -81,10 +92,118 @@ class VerifyEmailView(APIView):
 
 class UserProfileView(generics.RetrieveAPIView):
     serializer_class = UserProfileSerializer
-    permission_classes = [
-        permissions.IsAuthenticated
-    ]  # Only authenticated users can access
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrSuperUser]
 
     def get_object(self):
         # Return the currently authenticated user
         return self.request.user
+
+
+class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrSuperUser]
+
+    def get_object(self):
+        # Return the currently authenticated user
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        # Separate sensitive and non-sensitive fields
+        non_sensitive_fields = ["first_name", "last_name", "mobile_number"]
+        sensitive_fields = ["email", "password"]
+
+        # Update non-sensitive fields directly
+        self.update_non_sensitive_fields(
+            user, serializer.validated_data, non_sensitive_fields
+        )
+
+        if serializer.validated_data["email"] == user.email and check_password(
+            serializer.validated_data["password"], user.password
+        ):
+            return Response(
+                {"message": "Profile updated successfully."},
+                status=status.HTTP_200_OK,
+            )
+
+        # Check if sensitive fields are being updated
+        sensitive_data = {
+            field: serializer.validated_data.get(field)
+            for field in sensitive_fields
+            if field in serializer.validated_data
+        }
+
+        # Handle sensitive fields with email verification if necessary
+        if sensitive_data:
+            self.handle_sensitive_fields(user, sensitive_data)
+            message = (
+                "Profile updated successfully. "
+                "Check your email to verify sensitive changes."
+            )
+            return Response(
+                {"message": message},
+                status=status.HTTP_200_OK,
+            )
+
+    def update_non_sensitive_fields(self, user, validated_data, fields):
+        """Update non-sensitive fields directly."""
+        for field in fields:
+            if field in validated_data:
+                setattr(user, field, validated_data[field])
+        user.save()
+
+    def handle_sensitive_fields(self, user, sensitive_data):
+        """Trigger email verification for sensitive fields."""
+        send_verification_email(user, **sensitive_data, purpose="profile_update")
+
+
+class VerifyEmailPasswordUpdateView(APIView):
+    def get(self, request):
+        token = request.query_params.get("token")
+
+        if not token:
+            return Response(
+                {"error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        signer = TimestampSigner()
+        try:
+            token_data = force_str(
+                urlsafe_base64_decode(signer.unsign(token, max_age=86400))
+            )  # Token expires after 24 hours
+            # Convert string back to dictionary
+            token_data = eval(token_data)
+            user_id = token_data["user_id"]
+            new_email = token_data.get("email")
+            new_password = token_data.get("password")
+
+            user = User.objects.get(pk=user_id)
+
+            # Update email if provided
+            if new_email:
+                user.email = new_email
+                user.username = new_email  # Update username as well
+
+            # Update password if provided
+            if new_password:
+                user.set_password(new_password)
+
+            user.save()
+
+            return Response(
+                {"message": "Email/Password updated successfully"},
+                status=status.HTTP_200_OK,
+            )
+        except SignatureExpired:
+            return Response(
+                {"error": "Verification link has expired"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except BadSignature:
+            return Response(
+                {"error": "Invalid verification link"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

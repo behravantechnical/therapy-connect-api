@@ -6,17 +6,33 @@ from rest_framework_simplejwt.views import (
 
 from .views import (
     HomeView,
+    UserProfileUpdateView,
     UserProfileView,
     UserRegistrationView,
+    VerifyEmailPasswordUpdateView,
     VerifyEmailView,
 )
 
 app_name = "accounts"
 urlpatterns = [
     path("home/", HomeView.as_view(), name="home"),
-    path("register/", UserRegistrationView.as_view(), name="register"),
-    path("verify-email/", VerifyEmailView.as_view(), name="verify-email"),
-    path("user/login/", TokenObtainPairView.as_view(), name="auth_login"),
-    path("user/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("profile/", UserProfileView.as_view(), name="user-profile"),
+    # User registration and email verification
+    path("users/register/", UserRegistrationView.as_view(), name="user-register"),
+    path("users/verify-email/", VerifyEmailView.as_view(), name="user-verify-email"),
+    # JWT authentication
+    path("users/login/", TokenObtainPairView.as_view(), name="user-login"),
+    path("users/token/refresh/", TokenRefreshView.as_view(), name="user-token-refresh"),
+    # User profile
+    path("users/profile/", UserProfileView.as_view(), name="user-profile"),
+    # User update and Email/password update verification
+    path(
+        "users/profile/update/",
+        UserProfileUpdateView.as_view(),
+        name="user-profile-update",
+    ),
+    path(
+        "users/verify-email-password/",
+        VerifyEmailPasswordUpdateView.as_view(),
+        name="user-verify-email-password",
+    ),
 ]
