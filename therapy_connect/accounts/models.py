@@ -5,16 +5,10 @@ from .managers import UserManager
 
 
 class User(AbstractUser, PermissionsMixin):
-    ROLE_CHOICES = [
-        ("PATIENT", "Patient"),
-        ("THERAPIST", "Therapist"),
-    ]
-
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
-    mobile_number = models.CharField(max_length=15, unique=True)
-    email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+    mobile_number = models.CharField(max_length=15, unique=True)
+    email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
 
@@ -25,7 +19,7 @@ class User(AbstractUser, PermissionsMixin):
     REQUIRED_FIELDS = ["first_name", "last_name", "mobile_number"]
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.role})"
+        return f"{self.first_name} {self.last_name}"
 
     def save(self, *args, **kwargs):
         # Ensure username is set to email if not provided
