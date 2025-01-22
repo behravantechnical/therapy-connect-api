@@ -11,6 +11,7 @@ from .views import (
     UserRegistrationView,
     VerifyEmailPasswordUpdateView,
     VerifyEmailView,
+    LogoutView,
 )
 
 app_name = "accounts"
@@ -24,6 +25,8 @@ urlpatterns = [
     path("users/token/refresh/", TokenRefreshView.as_view(), name="user-token-refresh"),
     # User profile
     path("users/profile/", UserProfileView.as_view(), name="user-profile"),
+    # User Logout
+    path("users/logout/", LogoutView.as_view(), name="logout"),
     # User update and Email/password update verification
     path(
         "users/profile/update/",

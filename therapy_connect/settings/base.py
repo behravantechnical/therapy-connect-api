@@ -70,7 +70,7 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "django_filters",
     "rest_framework_simplejwt",
-    # 'django_timescaledb',
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 LOCAL_APPS = [
@@ -154,6 +154,7 @@ REST_FRAMEWORK = {
     ),
 }
 
+# JWT Settings
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=20),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=50),

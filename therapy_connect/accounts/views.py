@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views import View
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -97,6 +98,34 @@ class UserProfileView(generics.RetrieveAPIView):
     def get_object(self):
         # Return the currently authenticated user
         return self.request.user
+
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrSuperUser]
+
+    def post(self, request):
+        try:
+            # Get the refresh token from the request data
+            refresh_token = request.data.get("refresh_token")
+            if not refresh_token:
+                return Response(
+                    {"error": "Refresh token is required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Blacklist the refresh token
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            return Response(
+                {"message": "Successfully logged out."},
+                status=status.HTTP_205_RESET_CONTENT,
+            )
+        except Exception:
+            return Response(
+                {"error": "Invalid token or token already blacklisted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
