@@ -1,13 +1,15 @@
+from django.contrib.auth import get_user_model
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import JsonResponse
 from django.views import View
-from rest_framework import generics, status
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import User
-from .serializers import UserRegistrationSerializer
+from .serializers import UserProfileSerializer, UserRegistrationSerializer
 from .utils import send_verification_email
+
+User = get_user_model()
 
 
 class HomeView(View):
@@ -75,3 +77,14 @@ class VerifyEmailView(APIView):
                 {"error": "Invalid verification link"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]  # Only authenticated users can access
+
+    def get_object(self):
+        # Return the currently authenticated user
+        return self.request.user

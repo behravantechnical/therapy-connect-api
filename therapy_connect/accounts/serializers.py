@@ -15,3 +15,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         # Create the user using the UserManager
         user = User.objects.create_user(**validated_data)
         return user
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "mobile_number", "email"]
