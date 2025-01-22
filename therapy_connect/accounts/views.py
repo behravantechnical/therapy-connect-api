@@ -12,6 +12,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .permissions import IsOwnerOrSuperUser
 from .serializers import (
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     UserProfileSerializer,
     UserProfileUpdateSerializer,
     UserRegistrationSerializer,
@@ -253,4 +255,61 @@ class VerifyEmailPasswordUpdateView(APIView):
             return Response(
                 {"error": "Invalid verification link"},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class PasswordResetRequestView(APIView):
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        user = User.objects.get(email=email)
+
+        # Send password reset email
+        send_verification_email(user, purpose="password_reset")
+
+        return Response(
+            {"message": "Password reset link has been sent to your email."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    def post(self, request, token):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_password = serializer.validated_data["password"]
+
+        signer = TimestampSigner()
+        try:
+            # Verify the token
+            user_id = signer.unsign(
+                token, max_age=86400
+            )  # Token expires after 24 hours
+            user = User.objects.get(pk=user_id)
+
+            # Set the new password
+            user.set_password(new_password)
+            user.save()
+
+            return Response(
+                {"message": "Password has been reset successfully."},
+                status=status.HTTP_200_OK,
+            )
+        except SignatureExpired:
+            return Response(
+                {"error": "Password reset link has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except BadSignature:
+            return Response(
+                {"error": "Invalid password reset link."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found."},
+                status=status.HTTP_404_NOT_FOUND,
             )

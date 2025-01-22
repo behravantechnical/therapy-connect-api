@@ -14,13 +14,12 @@ def send_verification_email(user, email=None, password=None, purpose="registrati
         user: The user object.
         email: New email (for profile updates).
         password: New password (for profile updates).
-        purpose: The purpose of the email ("registration" or "profile_update").
+        purpose: The purpose of the email ("registration", "profile_update", or "password_reset").
     """
     signer = TimestampSigner()
 
     # Prepare token data based on the purpose
     if purpose == "registration":
-        # token_data = {"user_id": user.pk}
         reverse_name = "accounts:user-verify-email"
         subject = "Verify Your Email Address"
         message_action = "verify your email"
@@ -31,11 +30,25 @@ def send_verification_email(user, email=None, password=None, purpose="registrati
         subject = "Verify Your Email/Password Update"
         message_action = "verify your email/password update"
         token = signer.sign(urlsafe_base64_encode(force_bytes(str(token_data))))
+    elif purpose == "password_reset":
+        reverse_name = "accounts:user-password-reset-confirm"
+        subject = "Reset Your Password"
+        message_action = "reset your password"
+        token = signer.sign(user.pk)
     else:
-        raise ValueError("Invalid purpose. Use 'registration' or 'profile_update'.")
+        raise ValueError(
+            "Invalid purpose. Use 'registration', 'profile_update', or 'password_reset'."
+        )
 
     # Create verification link
-    verification_url = f"{settings.BASE_URL}{reverse(reverse_name)}?token={token}"
+    if purpose == "password_reset":
+        # For password reset, include the token in the URL path
+        verification_url = (
+            f"{settings.BASE_URL}{reverse(reverse_name, kwargs={'token': token})}"
+        )
+    else:
+        # For other purposes, include the token as a query parameter
+        verification_url = f"{settings.BASE_URL}{reverse(reverse_name)}?token={token}"
 
     # Compose email message
     message = f"Click the link below to {message_action}:\n\n{verification_url}"

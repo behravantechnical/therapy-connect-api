@@ -64,3 +64,25 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         if User.objects.filter(mobile_number=value).exclude(pk=user.pk).exists():
             raise ValidationError("This mobile number is already in use.")
         return value
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        # Check if the email exists in the database
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("User with this email does not exist.")
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True)
+
+    def validate_password(self, value):
+        # Add password complexity validation if needed
+        if len(value) < 3:
+            raise serializers.ValidationError(
+                "Password must be at least 8 characters long."
+            )
+        return value
