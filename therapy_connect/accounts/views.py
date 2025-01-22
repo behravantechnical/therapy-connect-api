@@ -5,10 +5,10 @@ from django.http import JsonResponse
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views import View
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .permissions import IsOwnerOrSuperUser
 from .serializers import (
@@ -126,6 +126,24 @@ class LogoutView(APIView):
                 {"error": "Invalid token or token already blacklisted."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class UserDeactivateView(APIView):
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]  # Only authenticated users can deactivate their account
+
+    def delete(self, request):
+        user = request.user  # Get the currently authenticated user
+
+        # Deactivate the user account
+        user.is_active = False
+        user.save()
+
+        return Response(
+            {"message": "Your account has been deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
 
 class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
