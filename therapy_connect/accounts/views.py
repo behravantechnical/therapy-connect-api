@@ -1,10 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
-from django.http import JsonResponse
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-from django.views import View
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,19 +19,6 @@ from .serializers import (
 from .utils import send_verification_email
 
 User = get_user_model()
-
-
-class HomeView(View):
-    def get(self, request, *args, **kwargs):
-        # Create a dictionary to represent the response data
-        response_data = {
-            "message": "Hello sensor Api!",
-            "status": "success",
-            "code": 200,
-        }
-
-        # Return the dictionary as a JSON response
-        return JsonResponse(response_data)
 
 
 class UserRegistrationView(generics.CreateAPIView):

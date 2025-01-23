@@ -5,7 +5,6 @@ from rest_framework_simplejwt.views import (
 )
 
 from .views import (
-    HomeView,
     LogoutView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
@@ -19,7 +18,6 @@ from .views import (
 
 app_name = "accounts"
 urlpatterns = [
-    path("home/", HomeView.as_view(), name="home"),
     # User registration and email verification
     path("users/register/", UserRegistrationView.as_view(), name="user-register"),
     path("users/verify-email/", VerifyEmailView.as_view(), name="user-verify-email"),
