@@ -9,6 +9,17 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .permissions import IsOwnerOrSuperUser
+from .schemas import (
+    logout_schema,
+    password_reset_confirm_schema,
+    password_reset_schema,
+    user_delete_schema,
+    user_profile_schema,
+    user_profile_update_schema,
+    user_registration_schema,
+    verify_email_password_update_schema,
+    verify_email_registration_schema,
+)
 from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -21,6 +32,7 @@ from .utils import send_verification_email
 User = get_user_model()
 
 
+@user_registration_schema
 class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
 
@@ -43,7 +55,8 @@ class UserRegistrationView(generics.CreateAPIView):
         )
 
 
-class VerifyEmailView(APIView):
+@verify_email_registration_schema
+class VerifyEmailRegistrationView(APIView):
     def get(self, request):
         token = request.query_params.get("token")
 
@@ -78,7 +91,12 @@ class VerifyEmailView(APIView):
             )
 
 
+@user_profile_schema
 class UserProfileView(generics.RetrieveAPIView):
+    """
+    This View is for display user profile
+    """
+
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrSuperUser]
 
@@ -87,6 +105,7 @@ class UserProfileView(generics.RetrieveAPIView):
         return self.request.user
 
 
+@logout_schema
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrSuperUser]
 
@@ -115,6 +134,7 @@ class LogoutView(APIView):
             )
 
 
+@user_delete_schema
 class UserDeactivateView(APIView):
     permission_classes = [
         permissions.IsAuthenticated
@@ -133,6 +153,7 @@ class UserDeactivateView(APIView):
         )
 
 
+@user_profile_update_schema
 class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileUpdateSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrSuperUser]
@@ -194,6 +215,7 @@ class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
         send_verification_email(user, **sensitive_data, purpose="profile_update")
 
 
+@verify_email_password_update_schema
 class VerifyEmailPasswordUpdateView(APIView):
     def get(self, request):
         token = request.query_params.get("token")
@@ -243,6 +265,7 @@ class VerifyEmailPasswordUpdateView(APIView):
             )
 
 
+@password_reset_schema
 class PasswordResetRequestView(APIView):
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -260,6 +283,7 @@ class PasswordResetRequestView(APIView):
         )
 
 
+@password_reset_confirm_schema
 class PasswordResetConfirmView(APIView):
     def post(self, request, token):
         serializer = PasswordResetConfirmSerializer(data=request.data)
