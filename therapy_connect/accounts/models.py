@@ -5,12 +5,21 @@ from .managers import UserManager
 
 
 class User(AbstractUser, PermissionsMixin):
+    # Define choices for the role field
+    ROLE_CHOICES = [
+        ("patient", "Patient"),
+        ("therapist", "Therapist"),
+    ]
+
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     mobile_number = models.CharField(max_length=15, unique=True)
     email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
+
+    # Add the role field with choices and default value
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="patient")
 
     objects = UserManager()
 

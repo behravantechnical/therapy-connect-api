@@ -9,8 +9,17 @@ class UserAdmin(BaseUserAdmin):
     form = UserChangeForm
     add_form = UserCreationForm
 
-    list_display = ("mobile_number", "first_name", "last_name", "is_admin")
-    list_filter = ("is_admin",)
+    list_display = (
+        "mobile_number",
+        "first_name",
+        "last_name",
+        "is_admin",
+        "role",
+    )
+    list_filter = (
+        "is_admin",
+        "role",
+    )
     readonly_fields = ("last_login",)
 
     fieldsets = (
@@ -23,6 +32,7 @@ class UserAdmin(BaseUserAdmin):
                     "email",
                     "mobile_number",
                     "password",
+                    "role",
                 )
             },
         ),
@@ -52,6 +62,7 @@ class UserAdmin(BaseUserAdmin):
                     "email",
                     "password1",
                     "password2",
+                    "role",
                 )
             },
         ),
