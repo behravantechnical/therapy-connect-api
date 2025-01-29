@@ -13,11 +13,6 @@ class PsychologicalIssue(models.Model):
     def __str__(self):
         return self.name
 
-    # class Meta:
-    # app_label = "profiles"
-    # app_label = "therapy_connect.profiles"
-    # app_label = "therapy_connect.profiles.models.PsychologicalIssue"
-
 
 # Profile for Patients
 class PatientProfile(models.Model):
