@@ -17,7 +17,7 @@ class User(AbstractUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
-
+    is_staff = models.BooleanField(default=False)
     # Add the role field with choices and default value
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="patient")
 
@@ -42,6 +42,6 @@ class User(AbstractUser, PermissionsMixin):
     def has_module_perms(self, app_label):
         return True
 
-    @property
-    def is_staff(self):
-        return self.is_admin
+    # @property
+    # def is_staff(self):
+    #     return self.is_admin

@@ -42,6 +42,7 @@ class UserAdmin(BaseUserAdmin):
                 "fields": (
                     "is_active",
                     "is_admin",
+                    "is_staff",
                     "is_superuser",
                     "last_login",
                     "groups",
