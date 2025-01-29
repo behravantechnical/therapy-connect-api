@@ -75,6 +75,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "therapy_connect.accounts",
+    "therapy_connect.profiles",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps

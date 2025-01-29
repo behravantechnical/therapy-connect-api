@@ -7,12 +7,28 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-urlpatterns = [
+# Admin URLs
+admin_urlpatterns = [
     path("admin/", admin.site.urls),
+]
+
+# Accounts App URLs
+accounts_urlpatterns = [
     path(
         "api/accounts/", include("therapy_connect.accounts.urls", namespace="accounts")
     ),
-    # SCHEMA
+]
+
+# Profiles App URLs
+profiles_urlpatterns = [
+    path(
+        "api/profiles/v1/",
+        include("therapy_connect.profiles.urls", namespace="profiles"),
+    ),
+]
+
+# Schema URLs
+schema_urlpatterns = [
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "schema/swagger-ui/",
@@ -23,6 +39,11 @@ urlpatterns = [
         "schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"
     ),
 ]
+
+# Combine all URL patterns
+urlpatterns = (
+    admin_urlpatterns + accounts_urlpatterns + profiles_urlpatterns + schema_urlpatterns
+)
 
 
 if settings.DEBUG:
