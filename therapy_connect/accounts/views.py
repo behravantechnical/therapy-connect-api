@@ -159,7 +159,6 @@ class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrSuperUser]
 
     def get_object(self):
-        # Return the currently authenticated user
         return self.request.user
 
     def update(self, request, *args, **kwargs):
@@ -176,8 +175,14 @@ class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
             user, serializer.validated_data, non_sensitive_fields
         )
 
-        if serializer.validated_data["email"] == user.email and check_password(
-            serializer.validated_data["password"], user.password
+        # Check if both email and password are provided in the request
+        email = serializer.validated_data.get(
+            "email", user.email
+        )  # Default to existing
+        password = serializer.validated_data.get("password", None)
+
+        if email == user.email and (
+            password is None or check_password(password, user.password)
         ):
             return Response(
                 {"message": "Profile updated successfully."},
@@ -186,12 +191,11 @@ class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
 
         # Check if sensitive fields are being updated
         sensitive_data = {
-            field: serializer.validated_data.get(field)
+            field: serializer.validated_data.get(field, getattr(user, field))
             for field in sensitive_fields
             if field in serializer.validated_data
         }
 
-        # Handle sensitive fields with email verification if necessary
         if sensitive_data:
             self.handle_sensitive_fields(user, sensitive_data)
             message = (
@@ -202,6 +206,8 @@ class UserProfileUpdateView(generics.RetrieveUpdateAPIView):
                 {"message": message},
                 status=status.HTTP_200_OK,
             )
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def update_non_sensitive_fields(self, user, validated_data, fields):
         """Update non-sensitive fields directly."""

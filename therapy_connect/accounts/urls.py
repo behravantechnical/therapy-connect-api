@@ -39,12 +39,6 @@ urlpatterns = [
     # JWT authentication
     path("users/login/", token_obtain_pair_view, name="user-login"),
     path("users/token/refresh/", token_refresh_view, name="user-token-refresh"),
-    # User profile
-    path("users/profile/", UserProfileView.as_view(), name="user-profile"),
-    # User Logout
-    path("users/logout/", LogoutView.as_view(), name="logout"),
-    # User delete
-    path("users/delete/", UserDeactivateView.as_view(), name="user-deactivate"),
     # User update and Email/password update verification
     path(
         "users/profile/update/",
@@ -56,6 +50,12 @@ urlpatterns = [
         VerifyEmailPasswordUpdateView.as_view(),
         name="user-verify-email-password",
     ),
+    # User profile
+    path("users/profile/", UserProfileView.as_view(), name="user-profile"),
+    # User Logout
+    path("users/logout/", LogoutView.as_view(), name="logout"),
+    # User delete
+    path("users/delete/", UserDeactivateView.as_view(), name="user-deactivate"),
     # User reset password and Email verification
     path(
         "users/password/reset/",
