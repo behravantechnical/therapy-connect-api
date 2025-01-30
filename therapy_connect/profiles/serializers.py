@@ -88,3 +88,52 @@ class TherapistProfileSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
+class AdminPatientProfileSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    mobile_number = serializers.CharField(source="user.mobile_number", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = PatientProfile
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "mobile_number",
+            "email",
+            "profile_image",
+            "conversation_summary",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class AdminTherapistProfileSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    mobile_number = serializers.CharField(source="user.mobile_number", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    specialties = serializers.SlugRelatedField(
+        many=True, queryset=PsychologicalIssue.objects.all(), slug_field="name"
+    )
+
+    class Meta:
+        model = TherapistProfile
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "mobile_number",
+            "email",
+            "profile_image",
+            "qualifications",
+            "specialties",
+            "time_zone",
+            "is_verified",
+            "created_at",
+            "updated_at",
+        ]

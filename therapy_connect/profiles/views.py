@@ -1,10 +1,19 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 
 from .models import PatientProfile, TherapistProfile
-from .permissions import IsPatientOrSuperuser, IsTherapistOrSuperuser
-from .serializers import PatientProfileSerializer, TherapistProfileSerializer
+from .permissions import (
+    IsAdminUser,
+    IsPatientOrSuperuser,
+    IsTherapistOrSuperuser,
+)
+from .serializers import (
+    AdminPatientProfileSerializer,
+    AdminTherapistProfileSerializer,
+    PatientProfileSerializer,
+    TherapistProfileSerializer,
+)
 
 
 class PatientProfileView(generics.RetrieveUpdateDestroyAPIView):
@@ -64,3 +73,27 @@ class TherapistProfileView(generics.RetrieveUpdateDestroyAPIView):
             {"detail": "Profile deactivated successfully."},
             status=status.HTTP_204_NO_CONTENT,
         )
+
+
+class PatientListView(viewsets.ReadOnlyModelViewSet):
+    """
+    Retrieve a list of all patients (admin-only).
+    - GET /patients/ -> List all patient profiles (Admin only)
+    - GET /patients/<id>/ -> Retrieve a specific patient profile (Admin only)
+    """
+
+    queryset = PatientProfile.objects.all()
+    serializer_class = AdminPatientProfileSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+
+
+class TherapistListView(viewsets.ReadOnlyModelViewSet):
+    """
+    Retrieve a list of all therapists.
+    - GET /therapists/ -> List all therapist profiles (Public or Admin-only)
+    - GET /therapists/<id>/ -> Retrieve a specific therapist profile (Public or Admin-only)
+    """
+
+    queryset = TherapistProfile.objects.all()
+    serializer_class = AdminTherapistProfileSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
