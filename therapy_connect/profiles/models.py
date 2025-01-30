@@ -57,7 +57,7 @@ class TherapistProfile(models.Model):
         null=True,
         help_text="Upload a profile picture for the patient.",
     )
-    qualifications = models.TextField()
+    qualifications = models.TextField(blank=True)
     specialties = models.ManyToManyField(PsychologicalIssue, blank=True)
     time_zone = models.CharField(
         max_length=50,
@@ -68,4 +68,4 @@ class TherapistProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.name
+        return self.user.email
