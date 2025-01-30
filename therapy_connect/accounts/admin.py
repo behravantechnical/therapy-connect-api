@@ -64,6 +64,7 @@ class UserAdmin(BaseUserAdmin):
                     "password1",
                     "password2",
                     "role",
+                    "is_active",
                 )
             },
         ),
