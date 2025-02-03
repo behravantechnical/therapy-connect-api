@@ -1,15 +1,24 @@
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema
 from rest_framework import filters, generics
 from rest_framework.permissions import IsAuthenticated
 
 from therapy_connect.profiles.models import TherapistProfile
 
 from .models import Availability
+from .schemas import (
+    create_availability_schema,
+    delete_availability_schema,
+    list_availability_schema,
+    update_availability_schema,
+)
 from .serializers import AvailabilitySerializer
 from .services import filter_availability
 
 
+@create_availability_schema
+@extend_schema(tags=["CreateAvailability"])
 class CreateAvailabilityView(generics.CreateAPIView):
     """
     Allows therapists to create their own availability slots.
@@ -26,6 +35,8 @@ class CreateAvailabilityView(generics.CreateAPIView):
         serializer.save(therapist=therapist)  # Assign therapist before saving
 
 
+@list_availability_schema
+@extend_schema(tags=["ListAvailability"])
 class ListAvailabilityView(generics.ListAPIView):
     """
     Allows patients to view available time slots.
@@ -49,6 +60,8 @@ class ListAvailabilityView(generics.ListAPIView):
         return filter_availability(queryset, self.request.query_params)
 
 
+@update_availability_schema
+@extend_schema(tags=["UpdateAvailability"])
 class UpdateAvailabilityView(generics.RetrieveUpdateAPIView):
     """
     Allows a therapist to update their availability slots.
@@ -70,6 +83,8 @@ class UpdateAvailabilityView(generics.RetrieveUpdateAPIView):
         return availability
 
 
+@delete_availability_schema
+@extend_schema(tags=["DeleteAvailability"])
 class DeleteAvailabilityView(generics.DestroyAPIView):
     """
     Allows a therapist to delete their availability slots.

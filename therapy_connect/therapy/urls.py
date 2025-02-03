@@ -9,21 +9,21 @@ from .views import (
 
 app_name = "therapy"
 urlpatterns = [
-    # create
+    # Create Availability
     path(
         "availability/create/",
         CreateAvailabilityView.as_view(),
         name="create-availability",
     ),
-    # list
+    # List Available Slots
     path("availability/", ListAvailabilityView.as_view(), name="list-availability"),
-    # update and retreive
+    # Update and Retrieve Availability
     path(
         "availability/<int:pk>/update/",
         UpdateAvailabilityView.as_view(),
         name="update-availability",
     ),
-    # delete
+    # Delete Availability
     path(
         "availability/<int:pk>/delete/",
         DeleteAvailabilityView.as_view(),
