@@ -27,6 +27,14 @@ profiles_urlpatterns = [
     ),
 ]
 
+# therapy App URLs
+therapy_urlpatterns = [
+    path(
+        "api/therapy/v1/",
+        include("therapy_connect.therapy.urls", namespace="profiles"),
+    ),
+]
+
 # Schema URLs
 schema_urlpatterns = [
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
@@ -42,7 +50,11 @@ schema_urlpatterns = [
 
 # Combine all URL patterns
 urlpatterns = (
-    admin_urlpatterns + accounts_urlpatterns + profiles_urlpatterns + schema_urlpatterns
+    admin_urlpatterns
+    + accounts_urlpatterns
+    + profiles_urlpatterns
+    + therapy_urlpatterns
+    + schema_urlpatterns
 )
 
 

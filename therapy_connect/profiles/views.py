@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 
@@ -8,6 +9,12 @@ from .permissions import (
     IsPatientOrSuperuser,
     IsTherapistOrSuperuser,
 )
+from .schemas import (
+    admin_can_list_patient_profile_schema,
+    admin_can_list_therapist_profile_schema,
+    patient_profile_schema,
+    therapist_profile_schema,
+)
 from .serializers import (
     AdminPatientProfileSerializer,
     AdminTherapistProfileSerializer,
@@ -16,6 +23,8 @@ from .serializers import (
 )
 
 
+@patient_profile_schema
+@extend_schema(tags=["PatientProfile"])
 class PatientProfileView(generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieve and update a patient's profile.
@@ -45,6 +54,8 @@ class PatientProfileView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
+@therapist_profile_schema
+@extend_schema(tags=["TherapistProfile"])
 class TherapistProfileView(generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieve and update a therapist's profile.
@@ -75,6 +86,8 @@ class TherapistProfileView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
+@admin_can_list_patient_profile_schema
+@extend_schema(tags=["AdminPatientProfileList"])
 class PatientListView(viewsets.ReadOnlyModelViewSet):
     """
     Retrieve a list of all patients (admin-only).
@@ -87,6 +100,8 @@ class PatientListView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdminUser]
 
 
+@admin_can_list_therapist_profile_schema
+@extend_schema(tags=["AdminTherapistProfileList"])
 class TherapistListView(viewsets.ReadOnlyModelViewSet):
     """
     Retrieve a list of all therapists.

@@ -1,0 +1,1638 @@
+openapi: 3.0.3
+info:
+  title: therapy_connect API
+  version: 1.0.0
+  description: Documentation
+paths:
+  /api/accounts/users/delete/:
+    delete:
+      operationId: api_accounts_users_delete_destroy
+      description: Deactivate the currently authenticated user's account. This endpoint
+        requires a valid access token in the Authorization header.
+      summary: Deactivate User Account
+      parameters:
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        description: 'Access token for authorization. Format: ''Bearer <access_token>'''
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Account deactivated successfully.
+                content:
+                  application/json:
+                    example:
+                      message: Your account has been deleted successfully.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication credentials were not provided or are invalid.
+                content:
+                  application/json:
+                    example:
+                      detail: Authentication credentials were not provided.
+          description: ''
+  /api/accounts/users/login/:
+    post:
+      operationId: api_accounts_users_login_create
+      description: Authenticate a user and obtain JWT access and refresh tokens. Provide
+        valid username and password to receive the tokens.
+      summary: User Login (Obtain JWT Tokens)
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                username: your_email
+                password: your_password
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: JWT tokens obtained successfully.
+                content:
+                  application/json:
+                    example:
+                      access: your_access_token
+                      refresh: your_refresh_token
+              examples:
+                SuccessExample:
+                  value:
+                    access: your_access_token
+                    refresh: your_refresh_token
+                  summary: Success Example
+                ErrorExample-InvalidCredentials:
+                  value:
+                    detail: No active account found with the given credentials.
+                  summary: Error Example - Invalid Credentials
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Invalid credentials.
+                content:
+                  application/json:
+                    example:
+                      detail: No active account found with the given credentials.
+          description: ''
+  /api/accounts/users/logout/:
+    post:
+      operationId: api_accounts_users_logout_create
+      description: Log out a user by blacklisting their refresh token. This endpoint
+        requires a valid access token in the Authorization header and a refresh token
+        in the request body.
+      summary: User Logout
+      parameters:
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        description: 'Access token for authorization. Format: ''Bearer <access_token>'''
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                refresh_token: your_refresh_token_here
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '205':
+          content:
+            application/json:
+              schema:
+                description: Successfully logged out.
+                content:
+                  application/json:
+                    example:
+                      message: Successfully logged out.
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid request or token error.
+                content:
+                  application/json:
+                    examples:
+                      MissingToken:
+                        value:
+                          error: Refresh token is required.
+                      InvalidToken:
+                        value:
+                          error: Invalid token or token already blacklisted.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Authentication credentials were not provided or are invalid.
+                content:
+                  application/json:
+                    example:
+                      detail: Authentication credentials were not provided.
+          description: ''
+  /api/accounts/users/password/reset/:
+    post:
+      operationId: api_accounts_users_password_reset_create
+      description: Request a password reset link. This endpoint sends a password reset
+        link to the provided email address if it exists in the system. No authentication
+        is required.
+      summary: Request Password Reset
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                email: user@example.com
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Password reset link sent successfully.
+                content:
+                  application/json:
+                    example:
+                      message: Password reset link has been sent to your email.
+              examples:
+                SuccessExample:
+                  value:
+                    message: Password reset link has been sent to your email.
+                  summary: Success Example
+                ErrorExample-InvalidEmail:
+                  value:
+                    error: Invalid email address or user not found.
+                  summary: Error Example - Invalid Email
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid request or email not found.
+                content:
+                  application/json:
+                    example:
+                      error: Invalid email address or user not found.
+          description: ''
+  /api/accounts/users/password/reset/confirm/{token}/:
+    post:
+      operationId: api_accounts_users_password_reset_confirm_create
+      description: Confirm and reset a user's password using a token sent to their
+        email. This endpoint allows the user to set a new password after verifying
+        the password reset token. The token is included in the URL, and the new password
+        is provided in the request body.
+      summary: Confirm Password Reset
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        description: The password reset token sent to the user's email address.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                password: new_secure_password
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Password reset successfully.
+                content:
+                  application/json:
+                    example:
+                      message: Password has been reset successfully.
+              examples:
+                SuccessExample:
+                  value:
+                    message: Password has been reset successfully.
+                  summary: Success Example
+                ErrorExample-ExpiredToken:
+                  value:
+                    error: Password reset link has expired.
+                  summary: Error Example - Expired Token
+                ErrorExample-InvalidToken:
+                  value:
+                    error: Invalid password reset link.
+                  summary: Error Example - Invalid Token
+                ErrorExample-InvalidPassword:
+                  value:
+                    error: Password must be at least 8 characters long.
+                  summary: Error Example - Invalid Password
+                ErrorExample-UserNotFound:
+                  value:
+                    error: User not found.
+                  summary: Error Example - User Not Found
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid or expired token, or invalid password.
+                content:
+                  application/json:
+                    examples:
+                      TokenExpired:
+                        value:
+                          error: Password reset link has expired.
+                      InvalidToken:
+                        value:
+                          error: Invalid password reset link.
+                      InvalidPassword:
+                        value:
+                          error: Password must be at least 8 characters long.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: User not found.
+                content:
+                  application/json:
+                    example:
+                      error: User not found.
+          description: ''
+  /api/accounts/users/profile/:
+    get:
+      operationId: api_accounts_users_profile_retrieve
+      description: Retrieve the profile of the currently authenticated user.
+      summary: Get User Profile
+      parameters:
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        description: Bearer token for authentication.
+        required: true
+        examples:
+          BearerTokenExample:
+            value: Bearer <access_token>
+            summary: Bearer Token Example
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+              examples:
+                ExampleResponse:
+                  value:
+                    first_name: John
+                    last_name: Doe
+                    email: john.doe@example.com
+                    mobile_number: '1234567890'
+                  summary: Example Response
+          description: ''
+  /api/accounts/users/profile/update/:
+    get:
+      operationId: api_accounts_users_profile_update_retrieve
+      description: Retrieve or update the profile of the currently authenticated user.
+        Updating sensitive fields (email, password) requires email verification.
+      summary: Update User Profile
+      parameters:
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        description: Bearer token for authentication.
+        required: true
+        examples:
+          BearerTokenExample:
+            value: Bearer <access_token>
+            summary: Bearer Token Example
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileUpdate'
+              examples:
+                ExampleGETResponse:
+                  value:
+                    first_name: John
+                    last_name: Doe
+                    email: john.doe@example.com
+                    mobile_number: '1234567890'
+                  summary: Example GET Response
+                ExamplePATCHResponse:
+                  value:
+                    message: Profile updated successfully. Check your email to verify
+                      sensitive changes.
+                  summary: Example PATCH Response
+          description: ''
+    put:
+      operationId: api_accounts_users_profile_update_update
+      description: Retrieve or update the profile of the currently authenticated user.
+        Updating sensitive fields (email, password) requires email verification.
+      summary: Update User Profile
+      parameters:
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        description: Bearer token for authentication.
+        required: true
+        examples:
+          BearerTokenExample:
+            value: Bearer <access_token>
+            summary: Bearer Token Example
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+            examples:
+              ExamplePATCHRequest:
+                value:
+                  first_name: Jane
+                  email: new_email@example.com
+                summary: Example PATCH Request
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileUpdate'
+              examples:
+                ExampleGETResponse:
+                  value:
+                    first_name: John
+                    last_name: Doe
+                    email: john.doe@example.com
+                    mobile_number: '1234567890'
+                  summary: Example GET Response
+                ExamplePATCHResponse:
+                  value:
+                    message: Profile updated successfully. Check your email to verify
+                      sensitive changes.
+                  summary: Example PATCH Response
+          description: ''
+    patch:
+      operationId: api_accounts_users_profile_update_partial_update
+      description: Retrieve or update the profile of the currently authenticated user.
+        Updating sensitive fields (email, password) requires email verification.
+      summary: Update User Profile
+      parameters:
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        description: Bearer token for authentication.
+        required: true
+        examples:
+          BearerTokenExample:
+            value: Bearer <access_token>
+            summary: Bearer Token Example
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdate'
+            examples:
+              ExamplePATCHRequest:
+                value:
+                  first_name: Jane
+                  email: new_email@example.com
+                summary: Example PATCH Request
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileUpdate'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileUpdate'
+              examples:
+                ExampleGETResponse:
+                  value:
+                    first_name: John
+                    last_name: Doe
+                    email: john.doe@example.com
+                    mobile_number: '1234567890'
+                  summary: Example GET Response
+                ExamplePATCHResponse:
+                  value:
+                    message: Profile updated successfully. Check your email to verify
+                      sensitive changes.
+                  summary: Example PATCH Response
+          description: ''
+  /api/accounts/users/register/:
+    post:
+      operationId: api_accounts_users_register_create
+      description: Register a new user. A verification email will be sent to the provided
+        email address.
+      summary: User Registration
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+            examples:
+              ExampleRequest:
+                value:
+                  first_name: John
+                  last_name: Doe
+                  email: john.doe@example.com
+                  mobile_number: '1234567890'
+                  password: securepassword123
+                summary: Example Request
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                description: User registered successfully. A verification email has
+                  been sent.
+                content:
+                  application/json:
+                    example:
+                      message: Registration successful. Please check your email to
+                        verify your account.
+              examples:
+                ExampleResponse:
+                  value:
+                    message: Registration successful. Please check your email to verify
+                      your account.
+                  summary: Example Response
+          description: ''
+  /api/accounts/users/token/refresh/:
+    post:
+      operationId: api_accounts_users_token_refresh_create
+      description: Obtain a new JWT access token by providing a valid refresh token.
+        This endpoint is used to refresh expired access tokens.
+      summary: Refresh JWT Access Token
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                refresh: your_refresh_token
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: New access token obtained successfully.
+                content:
+                  application/json:
+                    example:
+                      access: your_new_access_token
+              examples:
+                SuccessExample:
+                  value:
+                    access: your_new_access_token
+                  summary: Success Example
+                ErrorExample-InvalidRefreshToken:
+                  value:
+                    detail: Token is invalid or expired.
+                  summary: Error Example - Invalid Refresh Token
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Invalid or expired refresh token.
+                content:
+                  application/json:
+                    example:
+                      detail: Token is invalid or expired.
+          description: ''
+  /api/accounts/users/verify-email/:
+    get:
+      operationId: api_accounts_users_verify_email_retrieve
+      description: Verify a user's email address using the token sent to their email.
+        This endpoint is used to complete the user registration process.
+      summary: Verify Email Registration
+      parameters:
+      - in: query
+        name: token
+        schema:
+          type: string
+        description: The verification token sent to the user's email address.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Email verified successfully.
+                content:
+                  application/json:
+                    example:
+                      message: Email verified successfully
+              examples:
+                SuccessExample:
+                  value:
+                    message: Email verified successfully
+                  summary: Success Example
+                ErrorExample-ExpiredToken:
+                  value:
+                    error: Verification link has expired
+                  summary: Error Example - Expired Token
+                ErrorExample-InvalidToken:
+                  value:
+                    error: Invalid verification link
+                  summary: Error Example - Invalid Token
+                ErrorExample-MissingToken:
+                  value:
+                    error: Token is required
+                  summary: Error Example - Missing Token
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid or expired token.
+                content:
+                  application/json:
+                    examples:
+                      TokenExpired:
+                        value:
+                          error: Verification link has expired
+                      InvalidToken:
+                        value:
+                          error: Invalid verification link
+                      TokenMissing:
+                        value:
+                          error: Token is required
+          description: ''
+  /api/accounts/users/verify-email-password/:
+    get:
+      operationId: api_accounts_users_verify_email_password_retrieve
+      description: Verify and update a user's email and/or password using a token
+        sent to their email. This endpoint is used to complete the profile update
+        process when the user modifies their email or password. The token is sent
+        to the user's email and must be provided as a query parameter.
+      summary: Verify Email/Password Update
+      parameters:
+      - in: query
+        name: token
+        schema:
+          type: string
+        description: The verification token sent to the user's email address.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Email/Password updated successfully.
+                content:
+                  application/json:
+                    example:
+                      message: Email/Password updated successfully
+              examples:
+                SuccessExample:
+                  value:
+                    message: Email/Password updated successfully
+                  summary: Success Example
+                ErrorExample-ExpiredToken:
+                  value:
+                    error: Verification link has expired
+                  summary: Error Example - Expired Token
+                ErrorExample-InvalidToken:
+                  value:
+                    error: Invalid verification link
+                  summary: Error Example - Invalid Token
+                ErrorExample-MissingToken:
+                  value:
+                    error: Token is required
+                  summary: Error Example - Missing Token
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Invalid or expired token.
+                content:
+                  application/json:
+                    examples:
+                      TokenExpired:
+                        value:
+                          error: Verification link has expired
+                      InvalidToken:
+                        value:
+                          error: Invalid verification link
+                      TokenMissing:
+                        value:
+                          error: Token is required
+          description: ''
+  /api/profiles/v1/patients/:
+    get:
+      operationId: api_profiles_v1_patients_list
+      description: Retrieve a list of all patients. Admin-only access.
+      summary: List All Patients
+      tags:
+      - AdminPatientProfileList
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  description: List of patient profiles retrieved successfully.
+                  content:
+                    application/json:
+                      example:
+                      - id: 1
+                        first_name: John
+                        last_name: Doe
+                        mobile_number: '+1234567890'
+                        email: johndoe@example.com
+                        profile_image: https://example.com/media/patient_profile_images/image.jpg
+                        conversation_summary: Patient has shown signs of anxiety.
+                          Recommended therapy sessions.
+                        created_at: '2024-01-01T12:00:00Z'
+                        updated_at: '2024-01-02T14:30:00Z'
+                      - id: 2
+                        first_name: Jane
+                        last_name: Smith
+                        mobile_number: '+1987654321'
+                        email: janesmith@example.com
+                        profile_image: https://example.com/media/patient_profile_images/image2.jpg
+                        conversation_summary: Depression symptoms detected. Suggested
+                          cognitive behavioral therapy.
+                        created_at: '2024-02-05T09:15:00Z'
+                        updated_at: '2024-02-06T10:20:00Z'
+              examples:
+                SuccessExample:
+                  value:
+                  - - id: 1
+                      first_name: John
+                      last_name: Doe
+                      mobile_number: '+1234567890'
+                      email: johndoe@example.com
+                      profile_image: https://example.com/media/patient_profile_images/image.jpg
+                      conversation_summary: Patient has shown signs of anxiety. Recommended
+                        therapy sessions.
+                      created_at: '2024-01-01T12:00:00Z'
+                      updated_at: '2024-01-02T14:30:00Z'
+                  summary: Success Example
+                ErrorExample-Unauthorized:
+                  value:
+                  - detail: You do not have permission to perform this action.
+                  summary: Error Example - Unauthorized
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Unauthorized access. Admins only.
+                content:
+                  application/json:
+                    example:
+                      detail: You do not have permission to perform this action.
+          description: ''
+  /api/profiles/v1/patients/{id}/:
+    get:
+      operationId: api_profiles_v1_patients_retrieve
+      description: Retrieve a specific patient's profile by ID. Admin-only access.
+      summary: Retrieve Patient Profile
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this patient profile.
+        required: true
+      tags:
+      - AdminPatientProfileList
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Patient profile retrieved successfully.
+                content:
+                  application/json:
+                    example:
+                      id: 1
+                      first_name: John
+                      last_name: Doe
+                      mobile_number: '+1234567890'
+                      email: johndoe@example.com
+                      profile_image: https://example.com/media/patient_profile_images/image.jpg
+                      conversation_summary: Patient has shown signs of anxiety. Recommended
+                        therapy sessions.
+                      created_at: '2024-01-01T12:00:00Z'
+                      updated_at: '2024-01-02T14:30:00Z'
+              examples:
+                SuccessExample:
+                  value:
+                    id: 1
+                    first_name: John
+                    last_name: Doe
+                    mobile_number: '+1234567890'
+                    email: johndoe@example.com
+                    profile_image: https://example.com/media/patient_profile_images/image.jpg
+                    conversation_summary: Patient has shown signs of anxiety. Recommended
+                      therapy sessions.
+                    created_at: '2024-01-01T12:00:00Z'
+                    updated_at: '2024-01-02T14:30:00Z'
+                  summary: Success Example
+                ErrorExample-ProfileNotFound:
+                  value:
+                    detail: No patient profile found with the given ID.
+                  summary: Error Example - Profile Not Found
+                ErrorExample-Unauthorized:
+                  value:
+                    detail: You do not have permission to perform this action.
+                  summary: Error Example - Unauthorized
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Patient profile not found.
+                content:
+                  application/json:
+                    example:
+                      detail: No patient profile found with the given ID.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Unauthorized access. Admins only.
+                content:
+                  application/json:
+                    example:
+                      detail: You do not have permission to perform this action.
+          description: ''
+  /api/profiles/v1/patients/me/:
+    get:
+      operationId: api_profiles_v1_patients_me_retrieve
+      description: |-
+        Retrieve and update a patient's profile.
+        - GET: View full profile details.
+        - PATCH: Update only the `profile_image`.
+        - DELETE: Soft delete (deactivate the user).
+      tags:
+      - PatientProfile
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientProfile'
+          description: ''
+    put:
+      operationId: api_profiles_v1_patients_me_update
+      description: |-
+        Retrieve and update a patient's profile.
+        - GET: View full profile details.
+        - PATCH: Update only the `profile_image`.
+        - DELETE: Soft delete (deactivate the user).
+      tags:
+      - PatientProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatientProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatientProfile'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientProfile'
+          description: ''
+    patch:
+      operationId: api_profiles_v1_patients_me_partial_update
+      description: |-
+        Retrieve and update a patient's profile.
+        - GET: View full profile details.
+        - PATCH: Update only the `profile_image`.
+        - DELETE: Soft delete (deactivate the user).
+      tags:
+      - PatientProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPatientProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPatientProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPatientProfile'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientProfile'
+          description: ''
+    delete:
+      operationId: api_profiles_v1_patients_me_destroy
+      description: |-
+        Retrieve and update a patient's profile.
+        - GET: View full profile details.
+        - PATCH: Update only the `profile_image`.
+        - DELETE: Soft delete (deactivate the user).
+      tags:
+      - PatientProfile
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/profiles/v1/therapist/me/:
+    get:
+      operationId: api_profiles_v1_therapist_me_retrieve
+      description: |-
+        Retrieve and update a therapist's profile.
+        - GET: View full profile details.
+        - PATCH: Update only specific fields (e.g., profile_image,
+        qualifications, specialties, time_zone).
+        - DELETE: Soft delete (deactivate the user).
+      tags:
+      - TherapistProfile
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TherapistProfile'
+          description: ''
+    put:
+      operationId: api_profiles_v1_therapist_me_update
+      description: |-
+        Retrieve and update a therapist's profile.
+        - GET: View full profile details.
+        - PATCH: Update only specific fields (e.g., profile_image,
+        qualifications, specialties, time_zone).
+        - DELETE: Soft delete (deactivate the user).
+      tags:
+      - TherapistProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TherapistProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TherapistProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TherapistProfile'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TherapistProfile'
+          description: ''
+    patch:
+      operationId: api_profiles_v1_therapist_me_partial_update
+      description: |-
+        Retrieve and update a therapist's profile.
+        - GET: View full profile details.
+        - PATCH: Update only specific fields (e.g., profile_image,
+        qualifications, specialties, time_zone).
+        - DELETE: Soft delete (deactivate the user).
+      tags:
+      - TherapistProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTherapistProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTherapistProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTherapistProfile'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TherapistProfile'
+          description: ''
+    delete:
+      operationId: api_profiles_v1_therapist_me_destroy
+      description: |-
+        Retrieve and update a therapist's profile.
+        - GET: View full profile details.
+        - PATCH: Update only specific fields (e.g., profile_image,
+        qualifications, specialties, time_zone).
+        - DELETE: Soft delete (deactivate the user).
+      tags:
+      - TherapistProfile
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/profiles/v1/therapists/:
+    get:
+      operationId: api_profiles_v1_therapists_list
+      description: Retrieve a list of all therapists. Admin-only access.
+      summary: List All Therapists
+      tags:
+      - AdminTherapistProfileList
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  description: List of therapist profiles retrieved successfully.
+                  content:
+                    application/json:
+                      example:
+                      - id: 1
+                        first_name: Alice
+                        last_name: Johnson
+                        mobile_number: '+1234567890'
+                        email: alice@example.com
+                        profile_image: https://example.com/media/therapist_profile_images/image.jpg
+                        qualifications: Licensed Clinical Psychologist with 10 years
+                          of experience.
+                        specialties:
+                        - Anxiety
+                        - Depression
+                        time_zone: America/New_York
+                        is_verified: true
+                        created_at: '2024-01-01T12:00:00Z'
+                        updated_at: '2024-01-02T14:30:00Z'
+                      - id: 2
+                        first_name: Bob
+                        last_name: Smith
+                        mobile_number: '+1987654321'
+                        email: bob@example.com
+                        profile_image: https://example.com/media/therapist_profile_images/image2.jpg
+                        qualifications: Cognitive Behavioral Therapist with 8 years
+                          of experience.
+                        specialties:
+                        - PTSD
+                        - Stress Management
+                        time_zone: Europe/London
+                        is_verified: false
+                        created_at: '2024-02-05T09:15:00Z'
+                        updated_at: '2024-02-06T10:20:00Z'
+              examples:
+                SuccessExample:
+                  value:
+                  - - id: 1
+                      first_name: Alice
+                      last_name: Johnson
+                      mobile_number: '+1234567890'
+                      email: alice@example.com
+                      profile_image: https://example.com/media/therapist_profile_images/image.jpg
+                      qualifications: Licensed Clinical Psychologist with 10 years
+                        of experience.
+                      specialties:
+                      - Anxiety
+                      - Depression
+                      time_zone: America/New_York
+                      is_verified: true
+                      created_at: '2024-01-01T12:00:00Z'
+                      updated_at: '2024-01-02T14:30:00Z'
+                  summary: Success Example
+                ErrorExample-Unauthorized:
+                  value:
+                  - detail: You do not have permission to perform this action.
+                  summary: Error Example - Unauthorized
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Unauthorized access. Admins only.
+                content:
+                  application/json:
+                    example:
+                      detail: You do not have permission to perform this action.
+          description: ''
+  /api/profiles/v1/therapists/{id}/:
+    get:
+      operationId: api_profiles_v1_therapists_retrieve
+      description: Retrieve a specific therapist's profile by ID. Admin-only access.
+      summary: Retrieve Therapist Profile
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this therapist profile.
+        required: true
+      tags:
+      - AdminTherapistProfileList
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Therapist profile retrieved successfully.
+                content:
+                  application/json:
+                    example:
+                      id: 1
+                      first_name: Alice
+                      last_name: Johnson
+                      mobile_number: '+1234567890'
+                      email: alice@example.com
+                      profile_image: https://example.com/media/therapist_profile_images/image.jpg
+                      qualifications: Licensed Clinical Psychologist with 10 years
+                        of experience.
+                      specialties:
+                      - Anxiety
+                      - Depression
+                      time_zone: America/New_York
+                      is_verified: true
+                      created_at: '2024-01-01T12:00:00Z'
+                      updated_at: '2024-01-02T14:30:00Z'
+              examples:
+                SuccessExample:
+                  value:
+                    id: 1
+                    first_name: Alice
+                    last_name: Johnson
+                    mobile_number: '+1234567890'
+                    email: alice@example.com
+                    profile_image: https://example.com/media/therapist_profile_images/image.jpg
+                    qualifications: Licensed Clinical Psychologist with 10 years of
+                      experience.
+                    specialties:
+                    - Anxiety
+                    - Depression
+                    time_zone: America/New_York
+                    is_verified: true
+                    created_at: '2024-01-01T12:00:00Z'
+                    updated_at: '2024-01-02T14:30:00Z'
+                  summary: Success Example
+                ErrorExample-ProfileNotFound:
+                  value:
+                    detail: No therapist profile found with the given ID.
+                  summary: Error Example - Profile Not Found
+                ErrorExample-Unauthorized:
+                  value:
+                    detail: You do not have permission to perform this action.
+                  summary: Error Example - Unauthorized
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Therapist profile not found.
+                content:
+                  application/json:
+                    example:
+                      detail: No therapist profile found with the given ID.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Unauthorized access. Admins only.
+                content:
+                  application/json:
+                    example:
+                      detail: You do not have permission to perform this action.
+          description: ''
+  /schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    PatchedPatientProfile:
+      type: object
+      properties:
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        mobile_number:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        profile_image:
+          type: string
+          format: uri
+          nullable: true
+          description: Upload a profile picture for the patient.
+        conversation_summary:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedTherapistProfile:
+      type: object
+      properties:
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        mobile_number:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        profile_image:
+          type: string
+          format: uri
+          nullable: true
+          description: Upload a profile picture for the patient.
+        qualifications:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: integer
+        time_zone:
+          type: string
+          description: IANA time zone format (e.g., 'Europe/London', 'America/New_York')
+          maxLength: 50
+        is_verified:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedUserProfileUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        mobile_number:
+          type: string
+          maxLength: 15
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+    PatientProfile:
+      type: object
+      properties:
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        mobile_number:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        profile_image:
+          type: string
+          format: uri
+          nullable: true
+          description: Upload a profile picture for the patient.
+        conversation_summary:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - conversation_summary
+      - created_at
+      - email
+      - first_name
+      - last_name
+      - mobile_number
+      - updated_at
+    TherapistProfile:
+      type: object
+      properties:
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        mobile_number:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        profile_image:
+          type: string
+          format: uri
+          nullable: true
+          description: Upload a profile picture for the patient.
+        qualifications:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: integer
+        time_zone:
+          type: string
+          description: IANA time zone format (e.g., 'Europe/London', 'America/New_York')
+          maxLength: 50
+        is_verified:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - first_name
+      - is_verified
+      - last_name
+      - mobile_number
+      - time_zone
+      - updated_at
+    UserProfile:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        mobile_number:
+          type: string
+          maxLength: 15
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - email
+      - first_name
+      - last_name
+      - mobile_number
+    UserProfileUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        mobile_number:
+          type: string
+          maxLength: 15
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - first_name
+      - last_name
+      - mobile_number
+    UserRegistration:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        mobile_number:
+          type: string
+          maxLength: 15
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - first_name
+      - last_name
+      - mobile_number
+      - password
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
