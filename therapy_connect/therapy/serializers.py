@@ -185,3 +185,35 @@ class TherapyPanelTherapistUpdateSerializer(serializers.ModelSerializer):
             instance.last_session_date = datetime.now(timezone.utc)
 
         return super().update(instance, validated_data)
+
+
+class TherapyPanelPatientRetrieveSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Patients:
+    - Can see issue, therapist info, status, and assigned_at.
+    """
+
+    class Meta:
+        model = TherapyPanel
+        fields = ["id", "issue", "therapist", "status", "assigned_at"]
+
+
+class TherapyPanelTherapistRetrieveSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Therapists:
+    - Can see issue, patient info, status, assigned_at, "
+    "last_session_date, progress_notes, and completion_notes.
+    """
+
+    class Meta:
+        model = TherapyPanel
+        fields = [
+            "id",
+            "issue",
+            "patient",
+            "status",
+            "assigned_at",
+            "last_session_date",
+            "progress_notes",
+            "completion_notes",
+        ]

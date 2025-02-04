@@ -5,8 +5,8 @@ from .views import (
     DeleteAvailabilityView,
     ListAvailabilityView,
     TherapyPanelCreateView,
+    TherapyPanelRetrieveUpdateView,
     UpdateAvailabilityView,
-    TherapyPanelUpdateView,
 )
 
 app_name = "therapy"
@@ -31,14 +31,14 @@ urlpatterns = [
         DeleteAvailabilityView.as_view(),
         name="delete-availability",
     ),
-    # create therapy panel
+    # Create therapy panel (POST /therapy-panels/)
     path(
         "therapy-panels/", TherapyPanelCreateView.as_view(), name="create-therapy-panel"
     ),
-    # update therapy panel
+    # Retrieve or update therapy panel (GET /therapy-panels/{id}/, PUT /therapy-panels/{id}/)
     path(
         "therapy-panels/<int:pk>/",
-        TherapyPanelUpdateView.as_view(),
-        name="update-therapy-panel",
+        TherapyPanelRetrieveUpdateView.as_view(),
+        name="retrieve-update-therapy-panel",
     ),
 ]

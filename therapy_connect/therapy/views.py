@@ -17,7 +17,9 @@ from .schemas import (
 from .serializers import (
     AvailabilitySerializer,
     TherapyPanelCreateSerializer,
+    TherapyPanelPatientRetrieveSerializer,
     TherapyPanelPatientUpdateSerializer,
+    TherapyPanelTherapistRetrieveSerializer,
     TherapyPanelTherapistUpdateSerializer,
 )
 from .services import filter_availability
@@ -131,13 +133,19 @@ class TherapyPanelCreateView(generics.CreateAPIView):
         serializer.save(patient=patient)
 
 
-class TherapyPanelUpdateView(generics.UpdateAPIView):
+class TherapyPanelRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     """
-    API endpoint to update a therapy panel.
-    - Patients: Can only update `status` (to 'paused').
-    - Therapists: Can update `status` (to 'paused' or 'completed'),
-      `progress_notes`, and `completion_notes`.
-    - If a therapist sets `status` to 'completed', `last_session_date` is recorded.
+    API endpoint to retrieve OR update a therapy panel.
+
+    - GET: Patients can see issue, therapist info, status, and assigned_at.
+      - Therapists can see issue, patient info, status, "
+      "assigned_at, last_session_date, progress_notes, and completion_notes.
+
+    - PUT:
+      - Patients can update `status` (only to "paused").
+      - Therapists can update `status` (to "paused" or "completed"), "
+      "`progress_notes`, and `completion_notes`.
+      - If a therapist sets `status` to 'completed', `last_session_date` is recorded.
     """
 
     queryset = TherapyPanel.objects.all()
@@ -146,21 +154,24 @@ class TherapyPanelUpdateView(generics.UpdateAPIView):
     def get_serializer_class(self):
         """Dynamically select serializer based on user type (Patient or Therapist)."""
         user = self.request.user
+        if self.request.method == "GET":
+            if hasattr(user, "patient_profile"):
+                return TherapyPanelPatientRetrieveSerializer
+            if hasattr(user, "therapist_profile"):
+                return TherapyPanelTherapistRetrieveSerializer
 
-        if hasattr(user, "patient_profile"):
-            return TherapyPanelPatientUpdateSerializer
-
-        if hasattr(user, "therapist_profile"):
-            return TherapyPanelTherapistUpdateSerializer
+        elif self.request.method == "PUT":
+            if hasattr(user, "patient_profile"):
+                return TherapyPanelPatientUpdateSerializer
+            if hasattr(user, "therapist_profile"):
+                return TherapyPanelTherapistUpdateSerializer
 
         raise PermissionDenied(
-            "You do not have permission to update this therapy panel."
+            "You do not have permission to view or update this therapy panel."
         )
 
     def get_object(self):
-        """
-        Ensure that only the associated patient or therapist can access and update the panel.
-        """
+        """Ensure only the associated patient or therapist can access the panel."""
         therapy_panel = super().get_object()
         user = self.request.user
 
@@ -175,5 +186,5 @@ class TherapyPanelUpdateView(generics.UpdateAPIView):
             return therapy_panel  # Therapist accessing their assigned panel
 
         raise PermissionDenied(
-            "You do not have permission to update this therapy panel."
+            "You do not have permission to view or update this therapy panel."
         )

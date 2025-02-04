@@ -31,7 +31,7 @@ profiles_urlpatterns = [
 therapy_urlpatterns = [
     path(
         "api/therapy/v1/",
-        include("therapy_connect.therapy.urls", namespace="profiles"),
+        include("therapy_connect.therapy.urls", namespace="therapy"),
     ),
 ]
 
