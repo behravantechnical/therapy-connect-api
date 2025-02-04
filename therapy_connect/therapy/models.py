@@ -4,7 +4,11 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from therapy_connect.profiles.models import TherapistProfile
+from therapy_connect.profiles.models import (
+    PatientProfile,
+    PsychologicalIssue,
+    TherapistProfile,
+)
 
 User = get_user_model()
 
@@ -56,31 +60,44 @@ class Availability(models.Model):
             )
 
 
-# class TherapyPanel(models.Model):
-#     STATUS_CHOICES = [
-#         ("active", "Active"),
-#         ("completed", "Completed"),
-#         ("paused", "Paused"),
-#     ]
+class TherapyPanel(models.Model):
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("completed", "Completed"),
+        ("paused", "Paused"),
+    ]
 
-#     patient = models.ForeignKey(
-#         PatientProfile, on_delete=models.CASCADE, related_name="therapy_panels"
-#     )
-#     issue = models.ForeignKey(PsychologicalIssue, on_delete=models.CASCADE)
-#     therapist = models.ForeignKey(
-#         TherapistProfile, on_delete=models.CASCADE, null=True, blank=True
-#     )
-#     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active")
-#     progress_notes = models.TextField(
-#         blank=True,
-#         null=True,
-#         help_text="Details about patient progress for this issue.",
-#     )
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     last_updated = models.DateTimeField(auto_now=True)
+    patient = models.ForeignKey(
+        PatientProfile, on_delete=models.CASCADE, related_name="therapy_panels"
+    )
+    issue = models.ForeignKey(PsychologicalIssue, on_delete=models.CASCADE)
+    therapist = models.ForeignKey(
+        TherapistProfile, on_delete=models.CASCADE, null=True, blank=True
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active")
+    assigned_at = models.DateTimeField(
+        null=True, blank=True, help_text="Timestamp when therapist was assigned."
+    )
+    last_session_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date of the last session in this therapy panel.",
+    )
+    progress_notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Details about patient progress for this issue.",
+    )
+    completion_notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Final therapist notes when therapy is completed.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
 
-#     def __str__(self):
-#         return f"{self.patient.user.email} - {self.issue.name} ({self.status})"
+    def __str__(self):
+        return f"{self.patient.user.email} - {self.issue.name} ({self.status})"
 
 
 # class Appointment(models.Model):

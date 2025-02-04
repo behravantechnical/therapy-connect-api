@@ -4,6 +4,7 @@ from .views import (
     CreateAvailabilityView,
     DeleteAvailabilityView,
     ListAvailabilityView,
+    TherapyPanelCreateView,
     UpdateAvailabilityView,
 )
 
@@ -28,5 +29,9 @@ urlpatterns = [
         "availability/<int:pk>/delete/",
         DeleteAvailabilityView.as_view(),
         name="delete-availability",
+    ),
+    # create therapy panel
+    path(
+        "therapy-panels/", TherapyPanelCreateView.as_view(), name="create-therapy-panel"
     ),
 ]

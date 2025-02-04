@@ -1,9 +1,9 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from therapy_connect.profiles.models import TherapistProfile
+from therapy_connect.profiles.models import PatientProfile, TherapistProfile
 
-from .models import Availability
+from .models import Availability, TherapyPanel
 
 # import datetime
 
@@ -62,3 +62,48 @@ class AvailabilitySerializer(serializers.ModelSerializer):
             )
 
         return data
+
+
+class TherapyPanelCreateSerializer(serializers.ModelSerializer):
+    patient = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    suggested_therapists = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TherapyPanel
+        fields = ["id", "patient", "issue", "suggested_therapists"]
+
+    def get_suggested_therapists(self, obj):
+        """
+        Suggest therapists based on the selected issue.
+        """
+        issue_id = self.initial_data.get("issue")
+        if issue_id:
+            therapists = TherapistProfile.objects.filter(specialties__id=issue_id)
+            return [{"id": t.id, "name": t.user.get_full_name()} for t in therapists]
+        return []
+
+    def validate(self, data):
+        """
+        Ensure a patient doesn't already have an active panel for the same issue.
+        """
+        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", self.context["request"])
+        request = self.context["request"]
+        patient = PatientProfile.objects.get(user=request.user)
+        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", patient)
+        if TherapyPanel.objects.filter(
+            patient=patient, issue=data["issue"], status="active"
+        ).exists():
+            raise serializers.ValidationError(
+                "You already have an active therapy panel for this issue."
+            )
+
+        return data
+
+    def create(self, validated_data):
+        """
+        Create the therapy panel with the selected therapist.
+        """
+        request = self.context["request"]
+        patient = PatientProfile.objects.get(user=request.user)
+        validated_data["patient"] = patient
+        return super().create(validated_data)

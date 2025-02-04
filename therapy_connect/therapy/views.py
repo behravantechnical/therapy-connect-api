@@ -1,19 +1,20 @@
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
-from rest_framework import filters, generics
+from rest_framework import filters, generics, permissions
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
-from therapy_connect.profiles.models import TherapistProfile
+from therapy_connect.profiles.models import PatientProfile, TherapistProfile
 
-from .models import Availability
+from .models import Availability, TherapyPanel
 from .schemas import (
     create_availability_schema,
     delete_availability_schema,
     list_availability_schema,
     update_availability_schema,
 )
-from .serializers import AvailabilitySerializer
+from .serializers import AvailabilitySerializer, TherapyPanelCreateSerializer
 from .services import filter_availability
 
 
@@ -103,3 +104,23 @@ class DeleteAvailabilityView(generics.DestroyAPIView):
             Availability, id=self.kwargs["pk"], therapist=therapist
         )
         return availability
+
+
+class TherapyPanelCreateView(generics.CreateAPIView):
+    """
+    API endpoint for patients to create a therapy panel.
+    """
+
+    queryset = TherapyPanel.objects.all()
+    serializer_class = TherapyPanelCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        """
+        Ensure only patients can create therapy panels.
+        """
+        patient = PatientProfile.objects.filter(user=self.request.user).first()
+        if not patient:
+            raise PermissionDenied("Only patients can create a therapy panel.")
+
+        serializer.save(patient=patient)
