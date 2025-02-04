@@ -6,6 +6,7 @@ from .views import (
     ListAvailabilityView,
     TherapyPanelCreateView,
     UpdateAvailabilityView,
+    TherapyPanelUpdateView,
 )
 
 app_name = "therapy"
@@ -33,5 +34,11 @@ urlpatterns = [
     # create therapy panel
     path(
         "therapy-panels/", TherapyPanelCreateView.as_view(), name="create-therapy-panel"
+    ),
+    # update therapy panel
+    path(
+        "therapy-panels/<int:pk>/",
+        TherapyPanelUpdateView.as_view(),
+        name="update-therapy-panel",
     ),
 ]

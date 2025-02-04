@@ -14,7 +14,12 @@ from .schemas import (
     list_availability_schema,
     update_availability_schema,
 )
-from .serializers import AvailabilitySerializer, TherapyPanelCreateSerializer
+from .serializers import (
+    AvailabilitySerializer,
+    TherapyPanelCreateSerializer,
+    TherapyPanelPatientUpdateSerializer,
+    TherapyPanelTherapistUpdateSerializer,
+)
 from .services import filter_availability
 
 
@@ -124,3 +129,51 @@ class TherapyPanelCreateView(generics.CreateAPIView):
             raise PermissionDenied("Only patients can create a therapy panel.")
 
         serializer.save(patient=patient)
+
+
+class TherapyPanelUpdateView(generics.UpdateAPIView):
+    """
+    API endpoint to update a therapy panel.
+    - Patients: Can only update `status` (to 'paused').
+    - Therapists: Can update `status` (to 'paused' or 'completed'),
+      `progress_notes`, and `completion_notes`.
+    - If a therapist sets `status` to 'completed', `last_session_date` is recorded.
+    """
+
+    queryset = TherapyPanel.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        """Dynamically select serializer based on user type (Patient or Therapist)."""
+        user = self.request.user
+
+        if hasattr(user, "patient_profile"):
+            return TherapyPanelPatientUpdateSerializer
+
+        if hasattr(user, "therapist_profile"):
+            return TherapyPanelTherapistUpdateSerializer
+
+        raise PermissionDenied(
+            "You do not have permission to update this therapy panel."
+        )
+
+    def get_object(self):
+        """
+        Ensure that only the associated patient or therapist can access and update the panel.
+        """
+        therapy_panel = super().get_object()
+        user = self.request.user
+
+        if hasattr(user, "patient_profile") and therapy_panel.patient.user == user:
+            return therapy_panel  # Patient accessing their own panel
+
+        if (
+            hasattr(user, "therapist_profile")
+            and therapy_panel.therapist
+            and therapy_panel.therapist.user == user
+        ):
+            return therapy_panel  # Therapist accessing their assigned panel
+
+        raise PermissionDenied(
+            "You do not have permission to update this therapy panel."
+        )

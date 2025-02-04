@@ -1,11 +1,11 @@
+from datetime import datetime, timezone
+
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from therapy_connect.profiles.models import PatientProfile, TherapistProfile
 
 from .models import Availability, TherapyPanel
-
-# import datetime
 
 
 class AvailabilitySerializer(serializers.ModelSerializer):
@@ -86,10 +86,8 @@ class TherapyPanelCreateSerializer(serializers.ModelSerializer):
         """
         Ensure a patient doesn't already have an active panel for the same issue.
         """
-        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", self.context["request"])
         request = self.context["request"]
         patient = PatientProfile.objects.get(user=request.user)
-        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", patient)
         if TherapyPanel.objects.filter(
             patient=patient, issue=data["issue"], status="active"
         ).exists():
@@ -107,3 +105,83 @@ class TherapyPanelCreateSerializer(serializers.ModelSerializer):
         patient = PatientProfile.objects.get(user=request.user)
         validated_data["patient"] = patient
         return super().create(validated_data)
+
+
+class TherapyPanelPatientUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Patients:
+    - Can only update the `status` field.
+    - Status can only be changed to `paused`.
+    """
+
+    class Meta:
+        model = TherapyPanel
+        fields = ["status", "issue", "therapist"]
+        read_only_fields = ["issue", "therapist"]
+
+    def validate(self, data):
+        """
+        Ensure the patient provides at least one required field.
+        """
+        if not data:
+            raise serializers.ValidationError(
+                {"error": "You must provide status field to update."}
+            )
+
+        if "status" in data and data["status"] != "paused":
+            raise serializers.ValidationError(
+                {"status": "Patients can only change the status to 'paused'."}
+            )
+
+        return data
+
+
+class TherapyPanelTherapistUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Therapists:
+    - Can update `status` (to 'paused' or 'completed').
+    - If setting status to 'completed', automatically set `last_session_date`.
+    - Can update `progress_notes` and `completion_notes`.
+    """
+
+    class Meta:
+        model = TherapyPanel
+        fields = [
+            "status",
+            "progress_notes",
+            "completion_notes",
+            "assigned_at",
+            "last_session_date",
+            "issue",
+            "patient",
+        ]
+        read_only_fields = ["assigned_at", "last_session_date", "issue", "patient"]
+
+    def validate(self, data):
+        """
+        Ensure the therapist provides at least one required field.
+        """
+        if not data:
+            raise serializers.ValidationError(
+                {
+                    "error": "You must provide at least one field to "
+                    "update (e.g., 'status', 'progress_notes', or 'completion_notes')."
+                }
+            )
+
+        return data
+
+    def validate_status(self, value):
+        """Ensure therapists can only change the status to 'paused' or 'completed'."""
+        if value not in ["paused", "completed"]:
+            raise serializers.ValidationError(
+                "Therapists can only set the status to 'paused' or 'completed'."
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        """If therapy is completed, set last_session_date automatically."""
+        if validated_data.get("status") == "completed":
+            instance.last_session_date = datetime.now(timezone.utc)
+
+        return super().update(instance, validated_data)
