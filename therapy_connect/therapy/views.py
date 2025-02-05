@@ -202,7 +202,6 @@ class TherapyPanelListView(generics.ListAPIView):
     - Therapists can see therapy panels assigned to them.
     """
 
-    # serializer_class = TherapyPanelListSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
