@@ -67,10 +67,12 @@ class AvailabilitySerializer(serializers.ModelSerializer):
 class TherapyPanelCreateSerializer(serializers.ModelSerializer):
     patient = serializers.HiddenField(default=serializers.CurrentUserDefault())
     suggested_therapists = serializers.SerializerMethodField()
+    issue_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = TherapyPanel
-        fields = ["id", "patient", "issue", "suggested_therapists"]
+        fields = ["id", "patient", "issue", "issue_detail", "suggested_therapists"]
+        extra_kwargs = {"issue": {"write_only": True}}
 
     def get_suggested_therapists(self, obj):
         """
@@ -81,6 +83,10 @@ class TherapyPanelCreateSerializer(serializers.ModelSerializer):
             therapists = TherapistProfile.objects.filter(specialties__id=issue_id)
             return [{"id": t.id, "name": t.user.get_full_name()} for t in therapists]
         return []
+
+    def get_issue_detail(self, obj):
+        """Return issue as {id, name} instead of just an ID."""
+        return {"id": obj.issue.id, "name": obj.issue.name}
 
     def validate(self, data):
         """
@@ -110,30 +116,102 @@ class TherapyPanelCreateSerializer(serializers.ModelSerializer):
 class TherapyPanelPatientUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for Patients:
-    - Can only update the `status` field.
-    - Status can only be changed to `paused`.
+    - First update: Patients must select a therapist from the suggested list.
+    - Later updates: Patients can only change the status to "paused".
+    - Once a therapist is set, it cannot be changed.
     """
+
+    therapist_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = TherapyPanel
-        fields = ["status", "issue", "therapist"]
-        read_only_fields = ["issue", "therapist"]
+        fields = [
+            "status",
+            "therapist",
+            "therapist_detail",
+        ]
+        extra_kwargs = {"therapist": {"write_only": True}}
+
+    def get_therapist_detail(self, obj):
+        """Return therapist as {id, name} instead of just ID."""
+        return {"id": obj.therapist.id, "name": obj.therapist.user.get_full_name()}
 
     def validate(self, data):
-        """
-        Ensure the patient provides at least one required field.
-        """
-        if not data:
+        therapy_panel = self.instance  # Get the existing therapy panel
+        request = self.context["request"]
+        patient = request.user.patient_profile
+
+        # Ensure only patients can update this panel
+        if not hasattr(request.user, "patient_profile"):
             raise serializers.ValidationError(
-                {"error": "You must provide status field to update."}
+                {"error": "Only patients can update this panel."}
             )
 
-        if "status" in data and data["status"] != "paused":
-            raise serializers.ValidationError(
-                {"status": "Patients can only change the status to 'paused'."}
+        # **FIRST UPDATE (Therapist Selection)**
+        if therapy_panel.therapist is None:
+            if "therapist" not in data:
+                raise serializers.ValidationError(
+                    {
+                        "therapist": "You must select a therapist from the suggested list."
+                    }
+                )
+
+            # Get suggested therapists (not included in response)
+            suggested_therapists = TherapistProfile.objects.filter(
+                specialties=therapy_panel.issue
             )
 
-        return data
+            if data["therapist"] not in suggested_therapists:
+                raise serializers.ValidationError(
+                    {
+                        "therapist": "You can only choose a therapist from the suggested list."
+                    }
+                )
+
+            # Ensure the selected therapist has availability
+            if not data["therapist"].availabilities.exists():
+                raise serializers.ValidationError(
+                    {"therapist": "The selected therapist has no available time slots."}
+                )
+
+            # Ensure the patient does not have an active
+            # panel with this therapist for the same issue
+            if TherapyPanel.objects.filter(
+                patient=patient,
+                issue=therapy_panel.issue,
+                therapist=data["therapist"],
+                status="active",
+            ).exists():
+                raise serializers.ValidationError(
+                    {
+                        "therapist": "You already have an active panel with this "
+                        "therapist for this issue."
+                    }
+                )
+
+            return data  # Allow therapist selection
+
+        # **SUBSEQUENT UPDATES (Only Status Allowed)**
+        if "therapist" in data:
+            raise serializers.ValidationError(
+                {"therapist": "You cannot change your therapist after selection."}
+            )
+
+        if "status" in data:
+            if data["status"] != "paused":
+                raise serializers.ValidationError(
+                    {"status": "You can only change the status to 'paused'."}
+                )
+
+            return data  # Allow status update
+
+        # **Fix: Return error only if neither `therapist` nor `status` is provided**
+        raise serializers.ValidationError(
+            {
+                "error": "Invalid update. You must provide either "
+                "`therapist` (if not set) or `status`."
+            }
+        )
 
 
 class TherapyPanelTherapistUpdateSerializer(serializers.ModelSerializer):
@@ -143,6 +221,9 @@ class TherapyPanelTherapistUpdateSerializer(serializers.ModelSerializer):
     - If setting status to 'completed', automatically set `last_session_date`.
     - Can update `progress_notes` and `completion_notes`.
     """
+
+    issue = serializers.SerializerMethodField()
+    patient = serializers.SerializerMethodField()
 
     class Meta:
         model = TherapyPanel
@@ -156,6 +237,14 @@ class TherapyPanelTherapistUpdateSerializer(serializers.ModelSerializer):
             "patient",
         ]
         read_only_fields = ["assigned_at", "last_session_date", "issue", "patient"]
+
+    def get_issue(self, obj):
+        """Return issue as {id, name} instead of just ID."""
+        return {"id": obj.issue.id, "name": obj.issue.name}
+
+    def get_patient(self, obj):
+        """Return patient as {id, name} instead of just ID."""
+        return {"id": obj.patient.id, "name": obj.patient.user.get_full_name()}
 
     def validate(self, data):
         """
@@ -193,9 +282,20 @@ class TherapyPanelPatientRetrieveSerializer(serializers.ModelSerializer):
     - Can see issue, therapist info, status, and assigned_at.
     """
 
+    issue = serializers.SerializerMethodField()
+    therapist = serializers.SerializerMethodField()
+
     class Meta:
         model = TherapyPanel
         fields = ["id", "issue", "therapist", "status", "assigned_at"]
+
+    def get_issue(self, obj):
+        """Return issue as {id, name} instead of just ID."""
+        return {"id": obj.issue.id, "name": obj.issue.name}
+
+    def get_therapist(self, obj):
+        """Return therapist as {id, name} instead of just ID."""
+        return {"id": obj.therapist.id, "name": obj.therapist.user.get_full_name()}
 
 
 class TherapyPanelTherapistRetrieveSerializer(serializers.ModelSerializer):
@@ -204,6 +304,9 @@ class TherapyPanelTherapistRetrieveSerializer(serializers.ModelSerializer):
     - Can see issue, patient info, status, assigned_at, "
     "last_session_date, progress_notes, and completion_notes.
     """
+
+    issue = serializers.SerializerMethodField()
+    patient = serializers.SerializerMethodField()
 
     class Meta:
         model = TherapyPanel
@@ -217,3 +320,11 @@ class TherapyPanelTherapistRetrieveSerializer(serializers.ModelSerializer):
             "progress_notes",
             "completion_notes",
         ]
+
+    def get_issue(self, obj):
+        """Return issue as {id, name} instead of just ID."""
+        return {"id": obj.issue.id, "name": obj.issue.name}
+
+    def get_patient(self, obj):
+        """Return patient as {id, name} instead of just ID."""
+        return {"id": obj.patient.id, "name": obj.patient.user.get_full_name()}

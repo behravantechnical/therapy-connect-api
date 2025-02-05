@@ -142,10 +142,13 @@ class TherapyPanelRetrieveUpdateView(generics.RetrieveUpdateAPIView):
       "assigned_at, last_session_date, progress_notes, and completion_notes.
 
     - PUT:
-      - Patients can update `status` (only to "paused").
-      - Therapists can update `status` (to "paused" or "completed"), "
-      "`progress_notes`, and `completion_notes`.
-      - If a therapist sets `status` to 'completed', `last_session_date` is recorded.
+      - Patients:
+        - First update: Must select a therapist from the suggested list.
+        - Later updates: Can only update `status` (to "paused").
+      - Therapists:
+        - Can update `status` (to "paused" or "completed"), "
+        "`progress_notes`, and `completion_notes`.
+        - If a therapist sets `status` to 'completed', `last_session_date` is recorded.
     """
 
     queryset = TherapyPanel.objects.all()
@@ -154,6 +157,7 @@ class TherapyPanelRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     def get_serializer_class(self):
         """Dynamically select serializer based on user type (Patient or Therapist)."""
         user = self.request.user
+
         if self.request.method == "GET":
             if hasattr(user, "patient_profile"):
                 return TherapyPanelPatientRetrieveSerializer
