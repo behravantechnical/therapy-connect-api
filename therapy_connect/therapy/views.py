@@ -192,3 +192,41 @@ class TherapyPanelRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         raise PermissionDenied(
             "You do not have permission to view or update this therapy panel."
         )
+
+
+class TherapyPanelListView(generics.ListAPIView):
+    """
+    API endpoint for listing therapy panels.
+
+    - Patients can see their own therapy panels.
+    - Therapists can see therapy panels assigned to them.
+    """
+
+    # serializer_class = TherapyPanelListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        """Dynamically select serializer based on user type (Patient or Therapist)."""
+        user = self.request.user
+
+        if self.request.method == "GET":
+            if hasattr(user, "patient_profile"):
+                return TherapyPanelPatientRetrieveSerializer
+            if hasattr(user, "therapist_profile"):
+                return TherapyPanelTherapistRetrieveSerializer
+
+        raise PermissionDenied(
+            "You do not have permission to view or update this therapy panel."
+        )
+
+    def get_queryset(self):
+        """Filter therapy panels based on user type (patient or therapist)."""
+        user = self.request.user
+
+        if hasattr(user, "patient_profile"):
+            return TherapyPanel.objects.filter(patient=user.patient_profile)
+
+        if hasattr(user, "therapist_profile"):
+            return TherapyPanel.objects.filter(therapist=user.therapist_profile)
+
+        return TherapyPanel.objects.none()  # No access for other users

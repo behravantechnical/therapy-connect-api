@@ -295,7 +295,9 @@ class TherapyPanelPatientRetrieveSerializer(serializers.ModelSerializer):
 
     def get_therapist(self, obj):
         """Return therapist as {id, name} instead of just ID."""
-        return {"id": obj.therapist.id, "name": obj.therapist.user.get_full_name()}
+        if obj.therapist:
+            return {"id": obj.therapist.id, "name": obj.therapist.user.get_full_name()}
+        return None
 
 
 class TherapyPanelTherapistRetrieveSerializer(serializers.ModelSerializer):

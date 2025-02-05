@@ -5,6 +5,7 @@ from .views import (
     DeleteAvailabilityView,
     ListAvailabilityView,
     TherapyPanelCreateView,
+    TherapyPanelListView,
     TherapyPanelRetrieveUpdateView,
     UpdateAvailabilityView,
 )
@@ -31,11 +32,15 @@ urlpatterns = [
         DeleteAvailabilityView.as_view(),
         name="delete-availability",
     ),
-    # Create therapy panel (POST /therapy-panels/)
+    # POST: Create therapy panel (patients only)
     path(
-        "therapy-panels/", TherapyPanelCreateView.as_view(), name="create-therapy-panel"
+        "therapy-panels/create/",
+        TherapyPanelCreateView.as_view(),
+        name="create-therapy-panel",
     ),
-    # Retrieve or update therapy panel (GET /therapy-panels/{id}/, PUT /therapy-panels/{id}/)
+    # GET: List therapy panels (patients & therapists)
+    path("therapy-panels/", TherapyPanelListView.as_view(), name="therapy-panel-list"),
+    # GET/PUT: Retrieve or update a therapy panel (patients & therapists)
     path(
         "therapy-panels/<int:pk>/",
         TherapyPanelRetrieveUpdateView.as_view(),
