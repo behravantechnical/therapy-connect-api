@@ -1,4 +1,4 @@
-# from datetime import timedelta
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -100,64 +100,103 @@ class TherapyPanel(models.Model):
         return f"{self.patient.user.email} - {self.issue.name} ({self.status})"
 
 
-# class Appointment(models.Model):
-#     STATUS_CHOICES = [
-#         ("scheduled", "Scheduled"),
-#         ("completed", "Completed"),
-#         ("canceled", "Canceled"),
-#     ]
+class Appointment(models.Model):
+    STATUS_CHOICES = [
+        ("scheduled", "Scheduled"),
+        ("completed", "Completed"),
+        ("canceled", "Canceled"),
+    ]
 
-#     MEETING_CHOICES = [
-#         ("google_meet", "Google Meet"),
-#         ("zoom", "Zoom"),
-#         ("skype", "Skype"),
-#         ("other", "Other"),
-#     ]
+    MEETING_CHOICES = [
+        ("google_meet", "Google Meet"),
+        ("zoom", "Zoom"),
+        ("skype", "Skype"),
+        ("other", "Other"),
+    ]
 
-#     panel = models.ForeignKey(
-#         TherapyPanel, on_delete=models.CASCADE, related_name="appointments"
-#     )
-#     scheduled_time = models.DateTimeField(help_text="Scheduled time in UTC")
-#     duration = models.PositiveIntegerField(
-#         help_text="Duration of the appointment in minutes", default=60
-#     )
-#     status = models.CharField(
-#         max_length=10, choices=STATUS_CHOICES, default="scheduled"
-#     )
+    PAYMENT_STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("paid", "Paid"),
+        ("refunded", "Refunded"),
+        ("failed", "Failed"),
+    ]
 
-#     meeting_platform = models.CharField(
-#         max_length=20, choices=MEETING_CHOICES, default="zoom"
-#     )
-#     meeting_link = models.URLField(
-#         blank=True, null=True, help_text="Link to the virtual meeting."
-#     )
+    panel = models.ForeignKey(
+        "TherapyPanel", on_delete=models.CASCADE, related_name="appointments"
+    )
+    scheduled_time = models.DateTimeField(help_text="Scheduled time in UTC")
+    duration = models.PositiveIntegerField(
+        help_text="Duration of the appointment in minutes", default=60
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default="scheduled"
+    )
 
-#     is_deleted = models.BooleanField(default=False)
+    meeting_platform = models.CharField(
+        max_length=20, choices=MEETING_CHOICES, default="zoom"
+    )
+    meeting_link = models.URLField(
+        blank=True, null=True, help_text="Link to the virtual meeting."
+    )
 
-#     created_at = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)
 
-#     class Meta:
-#         ordering = ["scheduled_time"]
+    rescheduled_from = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Reference to the previous appointment if rescheduled.",
+    )
 
-#     def __str__(self):
-#         return (
-#             f"Appointment for {self.panel.patient.user.email} on {self.scheduled_time}"
-#         )
+    payment_status = models.CharField(
+        max_length=10, choices=PAYMENT_STATUS_CHOICES, default="pending"
+    )
 
-#     def clean(self):
-#         """
-#         Ensure no overlapping appointments for the same therapist.
-#         """
-#         overlapping_appointments = Appointment.objects.filter(
-#             panel__therapist=self.panel.therapist,
-#             scheduled_time__lt=self.scheduled_time + timedelta(minutes=self.duration),
-#             scheduled_time__gt=self.scheduled_time,
-#         ).exclude(id=self.id)
+    cancellation_reason = models.TextField(
+        blank=True, null=True, help_text="Reason for cancellation if applicable."
+    )
+    canceled_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Who canceled the appointment?",
+    )
 
-#         if overlapping_appointments.exists():
-#             raise ValidationError(
-#                 "This therapist already has an appointment at this time."
-#             )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["scheduled_time"]
+
+    def __str__(self):
+        return (
+            f"Appointment for {self.panel.patient.user.email} on {self.scheduled_time}"
+        )
+
+    def clean(self):
+        """
+        Ensure no overlapping appointments for the same therapist.
+        """
+        overlapping_appointments = Appointment.objects.filter(
+            panel__therapist=self.panel.therapist,
+            scheduled_time__lt=self.scheduled_time + timedelta(minutes=self.duration),
+            scheduled_time__gte=self.scheduled_time - timedelta(minutes=self.duration),
+        ).exclude(id=self.id)
+
+        if overlapping_appointments.exists():
+            raise ValidationError(
+                "This therapist already has an appointment at this time."
+            )
+
+    def can_reschedule(self):
+        """
+        Returns True if the patient can still reschedule (max 2 times per panel).
+        """
+        reschedule_count = Appointment.objects.filter(
+            panel=self.panel, rescheduled_from__isnull=False
+        ).count()
+        return reschedule_count < 2
 
 
 # # Tasks (assign tasks to patients in specific therapy panels)
@@ -181,3 +220,41 @@ class TherapyPanel(models.Model):
 
 #     def __str__(self):
 #         return f"Task for {self.panel.patient.user.email}"
+
+
+# class Payment(models.Model):
+#     appointment = models.OneToOneField(
+#         Appointment, on_delete=models.CASCADE, related_name="payment"
+#     )
+#     amount = models.DecimalField(max_digits=10, decimal_places=2)
+#     payment_date = models.DateTimeField(auto_now_add=True)
+#     is_confirmed = models.BooleanField(default=False)
+#     refunded = models.BooleanField(default=False)
+#     refund_reason = models.TextField(null=True, blank=True)
+
+#     def process_payment(self):
+#         """
+#         Marks the payment as confirmed and updates appointment status.
+#         """
+#         self.is_confirmed = True
+#         self.appointment.payment_status = "paid"
+#         self.appointment.save()
+#         self.save()
+
+#     def process_refund(self, reason):
+#         """
+#         Marks the payment as refunded.
+#         """
+#         if not self.is_confirmed:
+#             raise ValidationError("Cannot refund an unconfirmed payment.")
+#         self.refunded = True
+#         self.refund_reason = reason
+#         self.appointment.payment_status = "refunded"
+#         self.appointment.status = "canceled"
+#         self.appointment.save()
+#         self.save()
+
+#     def __str__(self):
+#         return (
+#             f"Payment for {self.appointment.panel.patient.user.email} - {self.amount}"
+#         )

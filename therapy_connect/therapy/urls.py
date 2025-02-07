@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    CreateAppointmentView,
     CreateAvailabilityView,
     DeleteAvailabilityView,
     ListAvailabilityView,
@@ -45,5 +46,11 @@ urlpatterns = [
         "therapy-panels/<int:pk>/",
         TherapyPanelRetrieveUpdateView.as_view(),
         name="retrieve-update-therapy-panel",
+    ),
+    # create appointments
+    path(
+        "appointments/<int:panel_id>/",
+        CreateAppointmentView.as_view(),
+        name="create-appointment",
     ),
 ]

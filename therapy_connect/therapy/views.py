@@ -1,9 +1,11 @@
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
-from rest_framework import filters, generics, permissions
+from rest_framework import filters, generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from therapy_connect.profiles.models import PatientProfile, TherapistProfile
 
@@ -15,6 +17,7 @@ from .schemas import (
     update_availability_schema,
 )
 from .serializers import (
+    AppointmentSerializer,
     AvailabilitySerializer,
     TherapyPanelCreateSerializer,
     TherapyPanelPatientRetrieveSerializer,
@@ -22,7 +25,7 @@ from .serializers import (
     TherapyPanelTherapistRetrieveSerializer,
     TherapyPanelTherapistUpdateSerializer,
 )
-from .services import filter_availability
+from .services import filter_availability, generate_meeting_link
 
 
 @create_availability_schema
@@ -229,3 +232,33 @@ class TherapyPanelListView(generics.ListAPIView):
             return TherapyPanel.objects.filter(therapist=user.therapist_profile)
 
         return TherapyPanel.objects.none()  # No access for other users
+
+
+class CreateAppointmentView(CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = AppointmentSerializer
+
+    def post(self, request, panel_id):
+        try:
+            panel = TherapyPanel.objects.get(id=panel_id, patient__user=request.user)
+        except TherapyPanel.DoesNotExist:
+            return Response(
+                {"error": "Invalid therapy panel."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = request.data.copy()
+        data["panel"] = panel.id
+        serializer = self.get_serializer(data=data, context={"request": request})
+
+        if serializer.is_valid():
+            appointment = serializer.save(
+                meeting_link=generate_meeting_link(
+                    panel_id,
+                    serializer.validated_data["scheduled_time"],
+                )
+            )
+            return Response(
+                AppointmentSerializer(appointment).data, status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

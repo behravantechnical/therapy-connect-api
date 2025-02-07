@@ -1,11 +1,12 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import serializers
 
 from therapy_connect.profiles.models import PatientProfile, TherapistProfile
 
-from .models import Availability, TherapyPanel
+from .models import Appointment, Availability, TherapyPanel
 
 
 class AvailabilitySerializer(serializers.ModelSerializer):
@@ -29,7 +30,7 @@ class AvailabilitySerializer(serializers.ModelSerializer):
         """
         request = self.context.get("request")
         therapist = get_object_or_404(TherapistProfile, user=request.user)
-
+        print("therapist", therapist)
         date = data.get("date")
         start_time = data.get("start_time")
         end_time = data.get("end_time")
@@ -330,3 +331,74 @@ class TherapyPanelTherapistRetrieveSerializer(serializers.ModelSerializer):
     def get_patient(self, obj):
         """Return patient as {id, name} instead of just ID."""
         return {"id": obj.patient.id, "name": obj.patient.user.get_full_name()}
+
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        fields = [
+            "id",
+            "panel",
+            "scheduled_time",
+            "duration",
+            "meeting_platform",
+            "meeting_link",
+            "status",
+            "payment_status",
+            "created_at",
+        ]
+
+    def validate(self, data):
+        user = self.context["request"].user
+        scheduled_time = data.get("scheduled_time")
+        duration = data.get("duration", 60)
+        panel = self.instance.panel if self.instance else data.get("panel")
+
+        if not panel or panel.patient.user != user:
+            raise serializers.ValidationError("Invalid therapy panel.")
+
+        therapist = panel.therapist
+        if not therapist:
+            raise serializers.ValidationError("No therapist assigned to this panel.")
+
+        # Ensure the scheduled time is at least 6 hours in the future
+        now = timezone.now()
+        min_allowed_time = now + timedelta(hours=6)
+        if scheduled_time < min_allowed_time:
+            raise serializers.ValidationError(
+                "Appointments must be scheduled at least 6 hours in advance."
+            )
+
+        # Check therapist availability
+        availability = Availability.objects.filter(
+            therapist=therapist,
+            date=scheduled_time.date(),
+            start_time__lte=scheduled_time.time(),
+            end_time__gte=(scheduled_time + timedelta(minutes=duration)).time(),
+        ).exists()
+
+        if not availability:
+            raise serializers.ValidationError(
+                "Therapist is not available at this time."
+            )
+
+        # Check for scheduling conflicts
+        overlapping_appointments = Appointment.objects.filter(
+            panel__therapist=therapist,
+            scheduled_time__lt=scheduled_time + timedelta(minutes=duration),
+            scheduled_time__gte=scheduled_time - timedelta(minutes=duration),
+            status="scheduled",
+        ).exists()
+
+        if overlapping_appointments:
+            raise serializers.ValidationError(
+                "Therapist already has an appointment at this time."
+            )
+
+        return data
+
+
+# # Ensure payment is completed
+# payment = Payment.objects.filter(panel=panel, status="paid").exists()
+# if not payment:
+#     raise serializers.ValidationError("Payment is required before scheduling an appointment.")

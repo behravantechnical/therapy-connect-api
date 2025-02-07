@@ -56,3 +56,8 @@ def filter_availability(queryset, params):
     queryset = queryset.filter(time_filters)
 
     return queryset
+
+
+# Helper function for meeting link generation
+def generate_meeting_link(panel_id, scheduled_time, meeting_platform="zoom"):
+    return f"https://{meeting_platform}.com/meeting/{panel_id}-{scheduled_time.timestamp()}"
