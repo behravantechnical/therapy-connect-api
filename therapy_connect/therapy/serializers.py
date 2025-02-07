@@ -402,3 +402,138 @@ class AppointmentSerializer(serializers.ModelSerializer):
 # payment = Payment.objects.filter(panel=panel, status="paid").exists()
 # if not payment:
 #     raise serializers.ValidationError("Payment is required before scheduling an appointment.")
+
+
+class RescheduleAppointmentSerializer(serializers.ModelSerializer):
+    new_scheduled_time = serializers.DateTimeField(write_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = ["id", "scheduled_time", "new_scheduled_time"]
+        read_only_fields = ["scheduled_time"]
+
+    def validate(self, data):
+        user = self.context["request"].user
+        new_scheduled_time = data["new_scheduled_time"]
+        appointment = self.instance  # Existing appointment being rescheduled
+
+        if appointment.status != "scheduled":
+            raise serializers.ValidationError(
+                "Only scheduled appointments can be rescheduled."
+            )
+
+        if appointment.panel.patient.user != user:
+            raise serializers.ValidationError(
+                "You can only reschedule your own appointments."
+            )
+
+        # Ensure the appointment is at least 6 hours away
+        now = timezone.now()
+        if appointment.scheduled_time < now + timedelta(hours=6):
+            raise serializers.ValidationError(
+                "You can only reschedule appointments that are at least 6 hours away."
+            )
+
+        # Ensure patient hasn't exceeded rescheduling limit (max 2 per panel)
+        reschedule_count = Appointment.objects.filter(
+            panel=appointment.panel, rescheduled_from__isnull=False
+        ).count()
+        if reschedule_count >= 2:
+            raise serializers.ValidationError(
+                "You have reached the rescheduling limit for this therapy panel."
+            )
+
+        # Ensure the new time is at least 6 hours in the future
+        if new_scheduled_time < now + timedelta(hours=6):
+            raise serializers.ValidationError(
+                "Appointments must be rescheduled at least 6 hours in advance."
+            )
+
+        # Ensure therapist is available at the new time
+        therapist = appointment.panel.therapist
+        availability = Availability.objects.filter(
+            therapist=therapist,
+            date=new_scheduled_time.date(),
+            start_time__lte=new_scheduled_time.time(),
+            end_time__gte=(
+                new_scheduled_time + timedelta(minutes=appointment.duration)
+            ).time(),
+        ).exists()
+
+        if not availability:
+            raise serializers.ValidationError(
+                "Therapist is not available at this time."
+            )
+
+        return data
+
+    def update(self, instance, validated_data):
+        """Override update() to call create() and return a new appointment instead."""
+        return self._create_new_appointment(validated_data)
+
+    def _create_new_appointment(self, validated_data):
+        """Create a new appointment linked to the previous one."""
+        appointment = self.instance
+        new_scheduled_time = validated_data["new_scheduled_time"]
+
+        # Create a new appointment
+        new_appointment = Appointment.objects.create(
+            panel=appointment.panel,
+            scheduled_time=new_scheduled_time,
+            duration=appointment.duration,
+            status="scheduled",
+            meeting_platform=appointment.meeting_platform,
+            meeting_link=appointment.meeting_link,
+            rescheduled_from=appointment,  # Link to previous appointment
+            payment_status=appointment.payment_status,  # Keep payment status
+        )
+
+        # Mark the old appointment as canceled
+        appointment.status = "canceled"
+        appointment.save()
+
+        return new_appointment
+
+
+class CancelAppointmentSerializer(serializers.ModelSerializer):
+    cancellation_reason = serializers.CharField(required=True)
+
+    class Meta:
+        model = Appointment
+        fields = ["id", "cancellation_reason"]
+
+    def validate(self, data):
+        user = self.context["request"].user
+        appointment = self.instance
+
+        if appointment.status != "scheduled":
+            raise serializers.ValidationError(
+                "Only scheduled appointments can be canceled."
+            )
+
+        if appointment.panel.patient.user != user:
+            raise serializers.ValidationError(
+                "You can only cancel your own appointments."
+            )
+
+        # Ensure the appointment is at least 6 hours away
+        now = timezone.now()
+        if appointment.scheduled_time < now + timedelta(hours=6):
+            raise serializers.ValidationError(
+                "You can only cancel appointments that are at least 6 hours away."
+            )
+
+        return data
+
+    def update(self, instance, validated_data):
+        """Cancel the appointment and process refund if applicable."""
+        instance.status = "canceled"
+        instance.cancellation_reason = validated_data["cancellation_reason"]
+        instance.save()
+
+        # # If the appointment has been paid, process a refund
+        # if instance.payment_status == "paid":
+        #     payment = instance.payment
+        #     payment.process_refund(reason=validated_data["cancellation_reason"])
+
+        return instance

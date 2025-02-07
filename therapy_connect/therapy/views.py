@@ -2,14 +2,14 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, generics, permissions, status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from therapy_connect.profiles.models import PatientProfile, TherapistProfile
 
-from .models import Availability, TherapyPanel
+from .models import Appointment, Availability, TherapyPanel
 from .schemas import (
     create_availability_schema,
     delete_availability_schema,
@@ -19,6 +19,8 @@ from .schemas import (
 from .serializers import (
     AppointmentSerializer,
     AvailabilitySerializer,
+    CancelAppointmentSerializer,
+    RescheduleAppointmentSerializer,
     TherapyPanelCreateSerializer,
     TherapyPanelPatientRetrieveSerializer,
     TherapyPanelPatientUpdateSerializer,
@@ -259,6 +261,81 @@ class CreateAppointmentView(CreateAPIView):
             )
             return Response(
                 AppointmentSerializer(appointment).data, status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UpdateAppointmentView(generics.UpdateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Appointment.objects.filter(panel__patient__user=self.request.user)
+
+    def get_serializer_class(self):
+        """Determine the correct serializer based on the request."""
+        action = self.request.data.get("action")
+
+        if not action:
+            raise ValidationError(
+                {
+                    "action": [
+                        "This field is required and must be 'reschedule' or 'cancel'."
+                    ]
+                }
+            )
+
+        if action == "reschedule":
+            return RescheduleAppointmentSerializer
+        elif action == "cancel":
+            return CancelAppointmentSerializer
+        else:
+            raise ValidationError(
+                {"action": ["Invalid action. Use 'reschedule' or 'cancel'."]}
+            )
+
+    def update(self, request, *args, **kwargs):
+        """Handles both rescheduling and canceling (refund)."""
+        action = request.data.get("action")
+
+        # Ensure 'action' is explicitly checked before proceeding
+        if not action:
+            raise ValidationError(
+                {
+                    "action": [
+                        "This field is required and must be 'reschedule' or 'cancel'."
+                    ]
+                }
+            )
+
+        # Fetch the appointment
+        appointment = self.get_object()
+
+        if action == "reschedule":
+            serializer = RescheduleAppointmentSerializer(
+                appointment, data=request.data, context={"request": request}
+            )
+        elif action == "cancel":
+            serializer = CancelAppointmentSerializer(
+                appointment, data=request.data, context={"request": request}
+            )
+        else:
+            raise ValidationError(
+                {"action": ["Invalid action. Use 'reschedule' or 'cancel'."]}
+            )
+
+        if serializer.is_valid():
+            updated_appointment = serializer.save()
+            return Response(
+                {
+                    "message": "Appointment updated successfully.",
+                    "appointment": (
+                        RescheduleAppointmentSerializer(updated_appointment).data
+                        if action == "reschedule"
+                        else CancelAppointmentSerializer(updated_appointment).data
+                    ),
+                },
+                status=status.HTTP_200_OK,
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
