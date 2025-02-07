@@ -19,5 +19,52 @@ services:
     env_file:
       - ../../.envs/.postgres
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  # celery-worker:
+  #   build:
+  #     context: ../..
+  #     dockerfile: ./deployment/local/Dockerfile
+  #   depends_on:
+  #     - db
+  #     - redis
+  #     - web
+  #   command: celery -A therapy_connect worker -l info
+
+  # celery-beat:
+  #   build:
+  #     context: ../..
+  #     dockerfile: ./deployment/local/Dockerfile
+  #   depends_on:
+  #     - db
+  #     - redis
+  #     - web
+  #   command: celery -A therapy_connect beat -l info
+
+  celery-worker:
+    build:
+      context: ../..
+      dockerfile: ./deployment/local/Dockerfile
+    depends_on:
+      - db
+      - redis
+      - web
+    command: >
+      sh -c "celery -A therapy_connect worker --loglevel=info --pool=solo"
+
+  celery-beat:
+    build:
+      context: ../..
+      dockerfile: ./deployment/local/Dockerfile
+    depends_on:
+      - db
+      - redis
+      - web
+    command: >
+      sh -c "python manage.py migrate django_celery_beat && celery -A therapy_connect beat -l info"
+
+
 volumes:
   postgres_data: {}

@@ -66,6 +66,7 @@ DJANGO_APPS = [
     "django.contrib.admin",
 ]
 THIRD_PARTY_APPS = [
+    "django_celery_beat",
     "rest_framework",
     "drf_spectacular",
     "django_filters",
@@ -141,6 +142,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # for access model User
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "accounts:user_login"
+
+# celery configurations
+# if USE_TZ:
+#     CELERY_TIMEZONE = TIME_ZONE
+CELERY_BROKER_URL = "redis://redis:6379/0"
+# CELERY_BROKER_URL = env("REDIS_URI")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
 
 # REST_FRAMEWORK CONFIGS
 REST_FRAMEWORK = {
