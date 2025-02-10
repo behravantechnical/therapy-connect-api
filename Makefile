@@ -34,7 +34,15 @@ local-stack-down:
 
 r:
 >	docker-compose -f $(LOCAL_DOCKER_COMPOSE) -p $(PROJECT_NAME) restart web
-.PHONY: r
+.PHONY: r 
+
+restart celery-worker:
+>	docker-compose -f $(LOCAL_DOCKER_COMPOSE) -p $(PROJECT_NAME) restart celery-worker
+.PHONY: restart celery-worker
+
+restart celery-beat:
+>	docker-compose -f $(LOCAL_DOCKER_COMPOSE) -p $(PROJECT_NAME) restart celery-beat
+.PHONY: restart celery-beat
 
 python-shell:
 >	docker-compose -f $(LOCAL_DOCKER_COMPOSE) -p $(PROJECT_NAME) exec web therapy_connect/manage.py shell
