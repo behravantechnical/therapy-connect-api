@@ -557,3 +557,60 @@ class CancelAppointmentSerializer(serializers.ModelSerializer):
         #     payment.process_refund(reason=validated_data["cancellation_reason"])
 
         return instance
+
+
+class TherapistCancelAppointmentSerializer(serializers.ModelSerializer):
+    cancellation_reason = serializers.CharField(required=True, write_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = ["id", "scheduled_time", "cancellation_reason"]
+        read_only_fields = ["scheduled_time"]
+
+    def validate(self, data):
+        user = self.context["request"].user
+        appointment = self.instance  # The appointment being canceled
+
+        # Ensure the user is a therapist and assigned to this appointment
+        if (
+            not hasattr(user, "therapist_profile")
+            or appointment.panel.therapist.user != user
+        ):
+            raise serializers.ValidationError(
+                "You can only cancel your own scheduled appointments."
+            )
+
+        # Ensure the appointment is scheduled
+        if appointment.status != "scheduled":
+            raise serializers.ValidationError(
+                "Only scheduled appointments can be canceled."
+            )
+
+        # Ensure there are at least 6 hours before the appointment
+        now = timezone.now()
+        if appointment.scheduled_time < now + timedelta(hours=6):
+            raise serializers.ValidationError(
+                "You can only cancel appointments that are at least 6 hours away."
+            )
+
+        # Ensure the cancellation reason is provided
+        if "cancellation_reason" not in data:
+            raise serializers.ValidationError(
+                {
+                    "cancellation_reason": "This field is required for canceling an appointment."
+                }
+            )
+
+        return data
+
+    def update(self, instance, validated_data):
+        """Cancel the appointment and optionally process a refund."""
+        instance.status = "canceled"
+        instance.cancellation_reason = validated_data["cancellation_reason"]
+        instance.save()
+
+        # Optional: Handle refund logic if the appointment was paid
+        # if instance.payment_status == "paid":
+        #     process_refund(instance)  # Implement your refund logic
+
+        return instance

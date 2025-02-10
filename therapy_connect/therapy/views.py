@@ -24,6 +24,7 @@ from .serializers import (
     TherapyPanelCreateSerializer,
     TherapyPanelPatientRetrieveSerializer,
     TherapyPanelPatientUpdateSerializer,
+    TherapistCancelAppointmentSerializer,
     TherapyPanelTherapistRetrieveSerializer,
     TherapyPanelTherapistUpdateSerializer,
 )
@@ -334,6 +335,45 @@ class UpdateAppointmentView(generics.UpdateAPIView):
                         if action == "reschedule"
                         else CancelAppointmentSerializer(updated_appointment).data
                     ),
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TherapistCancelAppointmentView(generics.UpdateAPIView):
+    """
+    API endpoint for therapists to cancel an appointment.
+    - Therapists can only cancel their own scheduled appointments.
+    - Appointment must be at least 6 hours away.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = TherapistCancelAppointmentSerializer
+
+    def get_queryset(self):
+        """Filter to return only the appointments of the logged-in therapist."""
+        user = self.request.user
+
+        if hasattr(user, "therapist_profile"):
+            return Appointment.objects.filter(panel__therapist__user=user)
+
+        return Appointment.objects.none()  # No access for non-therapists
+
+    def update(self, request, *args, **kwargs):
+        """Handles therapist appointment cancellation."""
+        appointment = self.get_object()
+        serializer = self.get_serializer(appointment, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            updated_appointment = serializer.save()
+            return Response(
+                {
+                    "message": "Appointment canceled successfully.",
+                    "appointment": TherapistCancelAppointmentSerializer(
+                        updated_appointment
+                    ).data,
                 },
                 status=status.HTTP_200_OK,
             )

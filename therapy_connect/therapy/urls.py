@@ -10,6 +10,7 @@ from .views import (
     TherapyPanelRetrieveUpdateView,
     UpdateAppointmentView,
     UpdateAvailabilityView,
+    TherapistCancelAppointmentView,
 )
 
 app_name = "therapy"
@@ -59,5 +60,11 @@ urlpatterns = [
         "appointments/<int:pk>/update/",
         UpdateAppointmentView.as_view(),
         name="update-appointment",
+    ),
+    # Therapist cancels an appointment
+    path(
+        "appointments/<int:pk>/cancel-by-therapist/",
+        TherapistCancelAppointmentView.as_view(),
+        name="therapist-cancel-appointment",
     ),
 ]
