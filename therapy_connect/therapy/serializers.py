@@ -9,6 +9,12 @@ from therapy_connect.profiles.models import PatientProfile, TherapistProfile
 from .models import Appointment, Availability, TherapyPanel
 
 
+# # Ensure the appointment is at least 6 hours away
+# now = timezone.now()
+# if appointment.scheduled_time < now + timedelta(hours=6):
+#     raise serializers.ValidationError(
+#         "You can only cancel appointments that are at least 6 hours away."
+#     )
 class AvailabilitySerializer(serializers.ModelSerializer):
     day_of_week = serializers.SerializerMethodField()
 
@@ -38,6 +44,20 @@ class AvailabilitySerializer(serializers.ModelSerializer):
         if not date or not start_time or not end_time:
             raise serializers.ValidationError(
                 "Date, start time, and end time are required."
+            )
+
+        if start_time >= end_time:
+            raise serializers.ValidationError("Start time must be before end time.")
+
+        # Combine date and time for comparison with current UTC time
+        current_time = timezone.now()
+        naive_datetime = datetime.combine(date, start_time)
+        start_datetime = timezone.make_aware(naive_datetime)
+
+        # Check if the start time is in the future
+        if start_datetime <= current_time:
+            raise serializers.ValidationError(
+                "Availability must be set for a future date and time."
             )
 
         if start_time >= end_time:
