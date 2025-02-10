@@ -4,7 +4,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, generics, permissions, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -238,29 +237,45 @@ class TherapyPanelListView(generics.ListAPIView):
         return TherapyPanel.objects.none()  # No access for other users
 
 
-class CreateAppointmentView(CreateAPIView):
+class CreateAppointmentView(generics.CreateAPIView):
+    """
+    Create a new appointment for a therapy panel.
+    - Patients can only create appointments for their own therapy panels.
+    - The `panel_id` is provided in the request body.
+    """
+
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = AppointmentSerializer
 
-    def post(self, request, panel_id):
+    def create(self, request, *args, **kwargs):
+        # Get panel_id from request body
+        panel_id = request.data.get("panel_id")
+
+        if not panel_id:
+            raise ValidationError({"panel_id": "This field is required."})
+
+        # Validate panel existence and ownership
         try:
             panel = TherapyPanel.objects.get(id=panel_id, patient__user=request.user)
         except TherapyPanel.DoesNotExist:
-            return Response(
-                {"error": "Invalid therapy panel."}, status=status.HTTP_400_BAD_REQUEST
+            raise ValidationError(
+                {"panel_id": "Invalid therapy panel or unauthorized access."}
             )
 
+        # Validate appointment data
         data = request.data.copy()
-        data["panel"] = panel.id
+        data["panel"] = panel.id  # Assign the correct panel ID
+
         serializer = self.get_serializer(data=data, context={"request": request})
 
         if serializer.is_valid():
-            appointment = serializer.save(
-                meeting_link=generate_meeting_link(
-                    panel_id,
-                    serializer.validated_data["scheduled_time"],
-                )
+            # Generate meeting link dynamically
+            meeting_link = generate_meeting_link(
+                panel_id,
+                serializer.validated_data["scheduled_time"],
             )
+
+            appointment = serializer.save(meeting_link=meeting_link)
             return Response(
                 AppointmentSerializer(appointment).data, status=status.HTTP_201_CREATED
             )
@@ -446,3 +461,41 @@ class TherapistAppointmentListView(generics.ListAPIView):
             queryset = queryset.filter(status="canceled").order_by("-scheduled_time")
 
         return queryset
+
+
+class AppointmentRetrieveView(generics.RetrieveAPIView):
+    """
+    Retrieve a specific appointment by ID.
+    Access Control:
+    - Patients can only retrieve their own appointments.
+    - Therapists can only retrieve appointments related to their patients.
+    """
+
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """
+        Retrieve an appointment only if the user is allowed to access it.
+        """
+        user = self.request.user
+        appointment_id = self.kwargs.get("pk")
+
+        # Get the appointment or return 404 if not found
+        appointment = get_object_or_404(Appointment, id=appointment_id)
+
+        # Access control: Check if user is allowed to view this appointment
+        if hasattr(user, "patient_profile"):  # If user is a patient
+            if appointment.panel.patient.user != user:
+                raise PermissionDenied("You can only view your own appointments.")
+
+        elif hasattr(user, "therapist_profile"):  # If user is a therapist
+            if appointment.panel.therapist.user != user:
+                raise PermissionDenied(
+                    "You can only view your own patient appointments."
+                )
+
+        else:
+            raise PermissionDenied("Access denied.")
+
+        return appointment

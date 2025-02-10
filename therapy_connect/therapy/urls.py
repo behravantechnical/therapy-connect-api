@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AppointmentRetrieveView,
     CreateAppointmentView,
     CreateAvailabilityView,
     DeleteAvailabilityView,
@@ -17,68 +18,68 @@ from .views import (
 
 app_name = "therapy"
 urlpatterns = [
-    # Create Availability
+    # Availability Management
     path(
-        "availability/create/",
+        "availabilities/", ListAvailabilityView.as_view(), name="list-availability"
+    ),  # GET: List all availability slots
+    path(
+        "availabilities/create/",
         CreateAvailabilityView.as_view(),
         name="create-availability",
-    ),
-    # List Available Slots
-    path("availability/", ListAvailabilityView.as_view(), name="list-availability"),
-    # Update and Retrieve Availability
+    ),  # POST: Create availability
     path(
-        "availability/<int:pk>/update/",
+        "availabilities/<int:pk>/",
         UpdateAvailabilityView.as_view(),
-        name="update-availability",
-    ),
-    # Delete Availability
+        name="retrieve-update-availability",
+    ),  # GET/PUT: Retrieve or update
     path(
-        "availability/<int:pk>/delete/",
+        "availabilities/<int:pk>/delete/",
         DeleteAvailabilityView.as_view(),
         name="delete-availability",
-    ),
-    # POST: Create therapy panel (patients only)
+    ),  # DELETE: Remove availability
+    # Therapy Panel Management
+    path(
+        "therapy-panels/", TherapyPanelListView.as_view(), name="list-therapy-panels"
+    ),  # GET: List therapy panels (patients & therapists)
     path(
         "therapy-panels/create/",
         TherapyPanelCreateView.as_view(),
         name="create-therapy-panel",
-    ),
-    # GET: List therapy panels (patients & therapists)
-    path("therapy-panels/", TherapyPanelListView.as_view(), name="therapy-panel-list"),
-    # GET/PUT: Retrieve or update a therapy panel (patients & therapists)
+    ),  # POST: Create therapy panel (patients only)
     path(
         "therapy-panels/<int:pk>/",
         TherapyPanelRetrieveUpdateView.as_view(),
         name="retrieve-update-therapy-panel",
-    ),
-    # create appointments
+    ),  # GET/PUT: Retrieve or update therapy panel
+    # Appointment Management
     path(
-        "appointments/<int:panel_id>/",
-        CreateAppointmentView.as_view(),
-        name="create-appointment",
-    ),
-    # update appointments for reschedule and cancel(refunde)
+        "appointments/", CreateAppointmentView.as_view(), name="create-appointment"
+    ),  # POST: Create appointment (panel_id in body)
+    path(
+        "appointments/<int:pk>/",
+        AppointmentRetrieveView.as_view(),
+        name="retrieve-appointment",
+    ),  # GET: Retrieve a specific appointment
     path(
         "appointments/<int:pk>/update/",
         UpdateAppointmentView.as_view(),
         name="update-appointment",
-    ),
-    # Therapist cancels an appointment
+    ),  # PUT/PATCH: Reschedule or update appointment
     path(
-        "appointments/<int:pk>/cancel-by-therapist/",
+        "appointments/<int:pk>/cancel/",
         TherapistCancelAppointmentView.as_view(),
-        name="therapist-cancel-appointment",
-    ),
-    # Patient Appointment List
+        name="cancel-appointment",
+    ),  # PATCH: Cancel appointment (therapist or patient)
+    # Patient-Specific Appointments
     path(
-        "appointments/",
+        "appointments/patient/",
         PatientAppointmentListView.as_view(),
-        name="patient-appointments",
-    ),
-    # Therapist Appointment List
+        name="list-patient-appointments",
+    ),  # GET: List patient’s scheduled appointments
+    # Therapist-Specific Appointments
     path(
-        "therapist/appointments/",
+        "appointments/therapist/",
         TherapistAppointmentListView.as_view(),
-        name="therapist-appointments",
-    ),
+        name="list-therapist-appointments",
+    ),  # GET: List therapist’s appointments with filters
 ]
