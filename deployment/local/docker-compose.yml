@@ -51,8 +51,10 @@ services:
       - db
       - redis
       - web
-    command: >
-      sh -c "celery -A therapy_connect worker --loglevel=info --pool=solo"
+    command: celery -A therapy_connect worker -l info
+    environment:
+      - DJANGO_SETTINGS_MODULE=therapy_connect.settings.local
+    restart: always
 
   celery-beat:
     build:
@@ -62,8 +64,10 @@ services:
       - db
       - redis
       - web
-    command: >
-      sh -c "python manage.py migrate django_celery_beat && celery -A therapy_connect beat -l info"
+    command: celery -A therapy_connect beat -l info
+    environment:
+      - DJANGO_SETTINGS_MODULE=therapy_connect.settings.local
+    restart: always
 
 
 volumes:

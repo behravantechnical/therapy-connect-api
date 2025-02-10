@@ -5,3 +5,4 @@ from .base import env
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = False
+ALLOWED_HOSTS = ["*"]

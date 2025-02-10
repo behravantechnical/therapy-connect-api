@@ -3,7 +3,7 @@ FROM python:3.11-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV DJANGO_SETTINGS_MODULE athlete.settings.production
+
 # Install the project dependencies
 RUN pip install --upgrade pip
 RUN apt-get -o Acquire::Check-Valid-Until="false" update && apt-get install -y libpq-dev
@@ -13,7 +13,7 @@ WORKDIR /app
 
 # Copy the requirements file into the container
 COPY requirements/ ./
-RUN pip install -r production.txt
+RUN pip install -r local.txt
 
 # Copy the project code into the container
 COPY ./ ./
@@ -22,5 +22,5 @@ COPY ./ ./
 EXPOSE 8000
 
 # Run the Django development server
-CMD python3 merovingian/manage.py migrate && \
-    gunicorn --config deployment/production/django/gunicorn.conf.py --bind 0.0.0.0:8000 --workers=3 "merovingian.wsgi:application"
+CMD python therapy_connect/manage.py migrate && \
+    gunicorn --config deployment/production/django/gunicorn.conf.py --bind 0.0.0.0:8000 --workers=1 "therapy_connect.wsgi:application"

@@ -144,12 +144,17 @@ AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "accounts:user_login"
 
 # celery configurations
-# if USE_TZ:
-#     CELERY_TIMEZONE = TIME_ZONE
+if USE_TZ:
+    CELERY_TIMEZONE = TIME_ZONE
 CELERY_BROKER_URL = "redis://redis:6379/0"
 # CELERY_BROKER_URL = env("REDIS_URI")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_TASK_TIME_LIMIT = 5 * 60
+CELERY_TASK_SOFT_TIME_LIMIT = 5 * 50
+BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600 * 6}
 
 
 # REST_FRAMEWORK CONFIGS
