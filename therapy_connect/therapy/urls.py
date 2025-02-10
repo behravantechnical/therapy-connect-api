@@ -5,12 +5,14 @@ from .views import (
     CreateAvailabilityView,
     DeleteAvailabilityView,
     ListAvailabilityView,
+    PatientAppointmentListView,
+    TherapistAppointmentListView,
+    TherapistCancelAppointmentView,
     TherapyPanelCreateView,
     TherapyPanelListView,
     TherapyPanelRetrieveUpdateView,
     UpdateAppointmentView,
     UpdateAvailabilityView,
-    TherapistCancelAppointmentView,
 )
 
 app_name = "therapy"
@@ -66,5 +68,17 @@ urlpatterns = [
         "appointments/<int:pk>/cancel-by-therapist/",
         TherapistCancelAppointmentView.as_view(),
         name="therapist-cancel-appointment",
+    ),
+    # Patient Appointment List
+    path(
+        "appointments/",
+        PatientAppointmentListView.as_view(),
+        name="patient-appointments",
+    ),
+    # Therapist Appointment List
+    path(
+        "therapist/appointments/",
+        TherapistAppointmentListView.as_view(),
+        name="therapist-appointments",
     ),
 ]

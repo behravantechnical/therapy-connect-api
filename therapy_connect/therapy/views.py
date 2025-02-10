@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, generics, permissions, status
@@ -21,10 +22,10 @@ from .serializers import (
     AvailabilitySerializer,
     CancelAppointmentSerializer,
     RescheduleAppointmentSerializer,
+    TherapistCancelAppointmentSerializer,
     TherapyPanelCreateSerializer,
     TherapyPanelPatientRetrieveSerializer,
     TherapyPanelPatientUpdateSerializer,
-    TherapistCancelAppointmentSerializer,
     TherapyPanelTherapistRetrieveSerializer,
     TherapyPanelTherapistUpdateSerializer,
 )
@@ -379,3 +380,69 @@ class TherapistCancelAppointmentView(generics.UpdateAPIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PatientAppointmentListView(generics.ListAPIView):
+    """
+    List all scheduled appointments for the authenticated patient.
+    """
+
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Return only the scheduled appointments where the current user is the patient.
+        """
+        user = self.request.user
+
+        # Ensure the user is a patient
+        if not hasattr(user, "patient_profile"):
+            raise PermissionDenied(
+                "Only patients can view their scheduled appointments."
+            )
+
+        return Appointment.objects.filter(
+            panel__patient__user=user,  # Filter by logged-in patient's appointments
+            status="scheduled",  # Only show scheduled appointments
+        ).order_by("scheduled_time")
+
+
+class TherapistAppointmentListView(generics.ListAPIView):
+    """
+    List all appointments (scheduled, completed, or canceled) for the authenticated therapist.
+    """
+
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Return appointments filtered by the logged-in therapist and requested status.
+        """
+        user = self.request.user
+
+        # Ensure the user is a therapist
+        if not hasattr(user, "therapist_profile"):
+            raise PermissionDenied("Only therapists can view their appointments.")
+
+        # Get the therapist's profile
+        therapist = user.therapist_profile
+
+        # Get the status filter from query parameters
+        status_filter = self.request.query_params.get("status", "").lower()
+
+        # Define default queryset (all appointments for this therapist)
+        queryset = Appointment.objects.filter(panel__therapist=therapist)
+
+        # Apply filters based on status
+        if status_filter == "scheduled":
+            queryset = queryset.filter(
+                status="scheduled", scheduled_time__gte=timezone.now()
+            ).order_by("scheduled_time")
+        elif status_filter == "completed":
+            queryset = queryset.filter(status="completed").order_by("-scheduled_time")
+        elif status_filter == "canceled":
+            queryset = queryset.filter(status="canceled").order_by("-scheduled_time")
+
+        return queryset
