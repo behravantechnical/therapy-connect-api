@@ -1,3 +1,72 @@
+# version: '3'
+# services:
+#   web:
+#     build:
+#       context: ../..
+#       dockerfile: ./deployment/production/django/Dockerfile
+#     ports:
+#       - "8001:8000"
+#     volumes:
+#       - ../..:/app
+#     depends_on:
+#       - db
+#     restart: always
+#     networks:
+#       - therapy_connect_network
+
+#   db:
+#     image: postgres:16
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data/
+#     env_file:
+#       - ../../.envs/.postgres
+#     networks:
+#       - therapy_connect_network
+
+#   # redis:
+#   #   image: redis:7-alpine
+#   #   restart: always
+#   #   networks:
+#   #     - therapy_connect_network
+
+
+#   # celery-worker:
+#   #   build:
+#   #     context: ../..
+#   #     dockerfile: ./deployment/production/django/Dockerfile
+#   #   depends_on:
+#   #     - db
+#   #     - redis
+#   #     - web
+#   #   command: >
+#   #     sh -c "celery -A therapy_connect worker --loglevel=info --pool=solo"
+#   #   networks:
+#   #     - therapy_connect_network
+
+
+#   # celery-beat:
+#   #   build:
+#   #     context: ../..
+#   #     dockerfile: ./deployment/production/django/Dockerfile
+#   #   depends_on:
+#   #     - db
+#   #     - redis
+#   #     - web
+#   #   command: >
+#   #     sh -c "python manage.py migrate django_celery_beat && celery -A therapy_connect beat -l info"
+#   #   networks:
+#   #     - therapy_connect_network
+
+
+# volumes:
+#   postgres_data: {}
+
+# networks:
+#   therapy_connect_network:
+#     external: false
+
+
+
 version: '3'
 services:
   web:
@@ -8,9 +77,11 @@ services:
       - "8001:8000"
     volumes:
       - ../..:/app
+    env_file:
+      - ../../.envs/.postgres
+    restart: always
     depends_on:
       - db
-    restart: always
     networks:
       - therapy_connect_network
 
@@ -20,43 +91,20 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
       - ../../.envs/.postgres
-    networks:
-      - therapy_connect_network
-
-  redis:
-    image: redis:7-alpine
     restart: always
     networks:
       - therapy_connect_network
 
-
-  celery-worker:
-    build:
-      context: ../..
-      dockerfile: ./deployment/production/django/Dockerfile
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/server.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
     depends_on:
-      - db
-      - redis
       - web
-    command: >
-      sh -c "celery -A therapy_connect worker --loglevel=info --pool=solo"
     networks:
       - therapy_connect_network
-
-
-  celery-beat:
-    build:
-      context: ../..
-      dockerfile: ./deployment/production/django/Dockerfile
-    depends_on:
-      - db
-      - redis
-      - web
-    command: >
-      sh -c "python manage.py migrate django_celery_beat && celery -A therapy_connect beat -l info"
-    networks:
-      - therapy_connect_network
-
 
 volumes:
   postgres_data: {}
