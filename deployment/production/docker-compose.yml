@@ -77,6 +77,8 @@ services:
       - "8001:8000"
     volumes:
       - ../..:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=therapy_connect.settings.production
     env_file:
       - ../../.envs/.postgres
     restart: always

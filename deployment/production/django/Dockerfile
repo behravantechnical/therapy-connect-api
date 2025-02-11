@@ -20,10 +20,10 @@ COPY ./ ./
 # Expose the port on which the Django application will run
 EXPOSE 8000
 
-# # Run the Django development server
-# CMD python therapy_connect/manage.py migrate && \
-#     gunicorn --config deployment/production/django/gunicorn.conf.py --bind 0.0.0.0:8000 --workers=1 "therapy_connect.wsgi:application"
-
-# Run the Django application with Gunicorn
+# Run the Django development server
 CMD python therapy_connect/manage.py migrate && \
-    gunicorn --bind 0.0.0.0:8000 --workers=1 "therapy_connect.wsgi:application"
+    gunicorn --config deployment/production/django/gunicorn.conf.py --bind 0.0.0.0:8000 --workers=1 "therapy_connect.wsgi:application"
+
+# # Run the Django application with Gunicorn
+# CMD python therapy_connect/manage.py migrate && \
+#     gunicorn --bind 0.0.0.0:8000 --workers=1 "therapy_connect.wsgi:application"

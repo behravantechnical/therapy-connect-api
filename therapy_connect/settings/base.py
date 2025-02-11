@@ -4,7 +4,6 @@ Base settings to build other settings files upon.
 
 from datetime import timedelta
 from pathlib import Path
-
 import environ  # type: ignore
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -64,6 +63,8 @@ DJANGO_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.messages",
     "django.contrib.admin",
+    # "corsheaders",
+    # "whitenoise.runserver_nostatic",
 ]
 THIRD_PARTY_APPS = [
     "django_celery_beat",
@@ -104,18 +105,20 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # "corsheaders.middleware.CorsMiddleware",
 ]
 
 # STATIC
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-url
-STATIC_URL = "/static/"
+# STATIC_URL = "/static/"
 
 # TEMPLATES
 # ------------------------------------------------------------------------------
@@ -184,3 +187,15 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Documentation",
     "VERSION": "1.0.0",
 }
+
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+STATIC_URL = "/static/"
+
+# Define where static files will be collected
+STATIC_ROOT = BASE_DIR / "staticfiles"  # or specify any directory
+
+# # Serve static files with WhiteNoise
+# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
